@@ -4,7 +4,8 @@
   "main": "server.ts",
   "scripts": {
     "test": "test",
-    "dev": "nodemon src/server.ts"
+    "dev1": "nodemon src/server.ts",
+    "dev": "nodemon --exec ts-node -r dotenv/config src/server.ts"
   },
   "repository": {
     "type": "git",
@@ -21,7 +22,10 @@
   "homepage": "https://github.com/Afiefanugrah/e-Docs-Zero-Trust-Access-Control-System#readme",
   "description": "",
   "dependencies": {
-    "express": "^5.1.0"
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mysql2": "^3.15.3",
+    "sequelize": "^6.37.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.5",

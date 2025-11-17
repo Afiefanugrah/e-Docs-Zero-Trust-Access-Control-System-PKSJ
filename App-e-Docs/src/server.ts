@@ -1,14 +1,18 @@
 import express, { Request, Response } from "express";
 
-const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT;
+
+// Db connettion
+import sequelize from "./config/db.config";
+sequelize.authenticate().then(() => console.log("✅ Database Ready"));
 
 // Middleware
+const app = express();
 app.use(express.json());
 
 // Route Sederhana
 app.get("/", (req: Request, res: Response) => {
-  res.send("Halo dari Express + TypeScript! (test) ");
+  res.send("Halo dari Express + TypeScript! (test)");
 });
 
 // Jalankan server
