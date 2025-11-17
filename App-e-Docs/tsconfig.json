@@ -1,0 +1,66 @@
+// {
+//   // Visit https://aka.ms/tsconfig to read more about this file
+//   "compilerOptions": {
+//     // File Layout
+//     // "rootDir": "./src",
+//     // "outDir": "./dist",
+
+//     // Environment Settings
+//     // See also https://aka.ms/tsconfig/module
+//     "module": "nodenext",
+//     "target": "esnext",
+//     "types": [],
+//     // For nodejs:
+//     // "lib": ["esnext"],
+//     // "types": ["node"],
+//     // and npm install -D @types/node
+
+//     // Other Outputs
+//     "sourceMap": true,
+//     "declaration": true,
+//     "declarationMap": true,
+
+//     // Stricter Typechecking Options
+//     "noUncheckedIndexedAccess": true,
+//     "exactOptionalPropertyTypes": true,
+
+//     // Style Options
+//     // "noImplicitReturns": true,
+//     // "noImplicitOverride": true,
+//     // "noUnusedLocals": true,
+//     // "noUnusedParameters": true,
+//     // "noFallthroughCasesInSwitch": true,
+//     // "noPropertyAccessFromIndexSignature": true,
+
+//     // Recommended Options
+//     "strict": true,
+//     "jsx": "react-jsx",
+//     "verbatimModuleSyntax": true,
+//     "isolatedModules": true,
+//     "noUncheckedSideEffectImports": true,
+//     "moduleDetection": "force",
+//     "skipLibCheck": true,
+//   }
+// }
+
+{
+  "compilerOptions": {
+    /* Konfigurasi Lingkungan (CommonJS) */
+    "target": "es2020" /* Versi JS yang dihasilkan */,
+    "module": "commonjs" /* Sistem modul Node.js standar */,
+    "esModuleInterop": true /* Untuk impor yang mulus */,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Lokasi File */
+    "outDir": "./dist" /* Output kompilasi */,
+    "rootDir": "./src" /* Sumber TS */,
+
+    /* Kualitas Kode */
+    "strict": true /* Aktifkan semua pemeriksaan ketat */,
+    "skipLibCheck": true /* Lewati pemeriksaan jenis untuk node_modules */
+  },
+
+  /* File yang Dikompilasi */
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

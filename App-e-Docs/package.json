@@ -1,0 +1,33 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "main": "server.ts",
+  "scripts": {
+    "test": "test",
+    "dev": "nodemon src/server.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Afiefanugrah/e-Docs-Zero-Trust-Access-Control-System.git"
+  },
+  "keywords": [
+    "express"
+  ],
+  "author": "M. Afief Anugrah",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Afiefanugrah/e-Docs-Zero-Trust-Access-Control-System/issues"
+  },
+  "homepage": "https://github.com/Afiefanugrah/e-Docs-Zero-Trust-Access-Control-System#readme",
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.1",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
