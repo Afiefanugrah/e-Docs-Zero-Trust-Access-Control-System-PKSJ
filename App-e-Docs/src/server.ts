@@ -9,12 +9,14 @@ import { setupAssociations } from "./models/associations.model";
 
 // ambil file di routes
 import usersEndpoint from "./routes/users.route";
+import authEndpoint from "./routes/auth.route";
 
 // Middleware
 const app = express();
 app.use(express.json());
 
 app.use("/api/users", usersEndpoint);
+app.use("/api/auth", authEndpoint);
 
 async function initializeServer() {
   try {

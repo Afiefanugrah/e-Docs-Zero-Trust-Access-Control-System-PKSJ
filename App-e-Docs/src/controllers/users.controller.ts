@@ -5,6 +5,7 @@ import * as bcrypt from "bcrypt";
 
 import { sendSuccess, sendError } from "../utils/response.utits";
 import { validatePassword } from "../utils/validatePassword.utlis";
+import { validateUsername } from "../utils/validators.utils";
 
 interface createUserBody {
   username: string;
@@ -63,9 +64,14 @@ class UserController {
         );
       }
 
-      const cekPassword = validatePassword(password);
-      if (!cekPassword.valid) {
-        return sendError(res, cekPassword.message || "Password lemah", 400);
+      const usernameCheck = validateUsername(username);
+      if (!usernameCheck.isValid) {
+        return sendError(res, usernameCheck.message!, 400);
+      }
+
+      const passwordCheck = validatePassword(password);
+      if (!passwordCheck.valid) {
+        return sendError(res, passwordCheck.message || "Password lemah", 400);
       }
 
       const passwordHash = await bcrypt.hash(password, 12);
