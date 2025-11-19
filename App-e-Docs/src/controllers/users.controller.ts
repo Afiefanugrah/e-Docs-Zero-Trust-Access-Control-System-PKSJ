@@ -3,7 +3,10 @@ import Users from "../models/users.model";
 import Roles from "../models/roles.model";
 import * as bcrypt from "bcrypt";
 
-interface UserCreationPayload {
+import { sendSuccess, sendError } from "../utils/response.utits";
+import { validatePassword } from "../utils/validatePassword.utlis";
+
+interface createUserBody {
   username: string;
   password: string;
   roleId: number;
@@ -24,40 +27,45 @@ class UserController {
         attributes: { exclude: ["passwordHash", "updatedAt"] },
       });
 
-      return res.status(200).json({
-        status: "success",
-        data: users,
-        metadata: "endpoint users",
-      });
+      return sendSuccess(
+        res,
+        users,
+        "Berhasil mengambil data pengunjung",
+        200,
+        {
+          total: users.length,
+        }
+      );
     } catch (error) {
-      console.error("Error saat mengambil pengguna:", error);
-
-      // Tangani error, kembalikan response 500 (Internal Server Error)
-      return res.status(500).json({
-        status: "error",
-        message: "Gagal mengambil data pengguna.",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
+      return sendError(res, "Gagal Mengambil data pengguna", 500, error);
     }
   }
 
-  public async postUsers(req: Request, res: Response): Promise<Response> {
+  public async postRegisterUsers(
+    req: Request,
+    res: Response
+  ): Promise<Response> {
     try {
       const { username, password, roleId, isActive } =
-        req.body as UserCreationPayload;
+        req.body as createUserBody;
 
-      if (!username || !password || !roleId || !isActive) {
-        return res.status(400).json({
-          massage: "Mohon isi username, password, role",
-        });
+      if (!username || !password || !roleId) {
+        return sendError(res, "Mohon isi username, password, dan role,", 400);
       }
 
-      const cekUserName = await Users.findOne({ where: { username } });
+      const cekUsername = await Users.findOne({ where: { username } });
 
-      if (cekUserName) {
-        return res.status(409).json({
-          message: "Username sudah digunakan. Silakan pilih yang lain.",
-        });
+      if (cekUsername) {
+        return sendError(
+          res,
+          "Username sudah digunakan. Silakan pilih yang lain.",
+          409
+        );
+      }
+
+      const cekPassword = validatePassword(password);
+      if (!cekPassword.valid) {
+        return sendError(res, cekPassword.message || "Password lemah", 400);
       }
 
       const passwordHash = await bcrypt.hash(password, 12);
@@ -69,25 +77,17 @@ class UserController {
         isActive,
       });
 
-      return res.status(200).json({
-        status: "success",
-        message: "Pengguna berhasil dibuat.",
-        data: {
-          id: newUser.id,
-          username: newUser.username,
-          roleId: newUser.roleId,
-          isActive: newUser.isActive,
-        },
-      });
-    } catch (error) {
-      console.error("Error saat mengambil pengguna:", error);
+      const responseData = {
+        id: newUser.id,
+        username: newUser.username,
+        roleId: newUser.roleId,
+        isActive: newUser.isActive,
+        createdAt: newUser.createdAt,
+      };
 
-      // Tangani error, kembalikan response 500 (Internal Server Error)
-      return res.status(500).json({
-        status: "error",
-        message: "Gagal mengambil data pengguna.",
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
+      return sendSuccess(res, responseData, "Pengguna berhasil dibuat.", 201);
+    } catch (error) {
+      return sendError(res, "Gagal membuat pengguna", 500, error);
     }
   }
 }

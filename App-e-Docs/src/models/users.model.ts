@@ -8,8 +8,8 @@ interface UserAttributes {
   password: string;
   roleId: number;
   isActive: Boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface UserCreationAttributes
@@ -48,27 +48,14 @@ Users.init(
     password: {
       type: DataTypes.STRING,
       allowNull: false,
-      field: "password",
     },
     roleId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "roleId",
     },
     isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
-    },
-    createdAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: Sequelize.literal("CURRENT_TIMESTAMP") as any,
-    },
-    updatedAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: Sequelize.literal("CURRENT_TIMESTAMP") as any,
-      onUpdate: Sequelize.literal("CURRENT_TIMESTAMP") as any,
     },
   },
   {
@@ -76,14 +63,8 @@ Users.init(
     modelName: "Users",
     tableName: "users",
     timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at",
+    underscored: true,
   }
 );
-
-// Users.belongsTo(Roles, {
-//     foreignKey: 'roleId', // Kolom FK di tabel Users
-//     as: 'role',           // Alias untuk query: user.getRole() atau user.role
-// });
 
 export default Users;

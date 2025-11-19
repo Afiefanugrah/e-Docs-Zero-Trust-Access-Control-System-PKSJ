@@ -6,6 +6,6 @@ const router = Router();
 // Route GET /api/users
 router.get("/", UserController.getAllUsers);
 
-router.post("/create", UserController.postUsers);
+router.post("/create", UserController.postRegisterUsers);
 
 export default router;

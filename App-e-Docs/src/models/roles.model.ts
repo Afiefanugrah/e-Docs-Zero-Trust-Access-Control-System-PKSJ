@@ -10,8 +10,8 @@ export enum UserRole {
 interface RoleAttributes {
   id: number;
   name: UserRole;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface RoleCreationAttributes
@@ -41,33 +41,14 @@ Roles.init(
       allowNull: false,
       unique: true,
     },
-
-    createdAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: Sequelize.literal("CURRENT_TIMESTAMP") as any,
-    },
-    updatedAt: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: Sequelize.literal("CURRENT_TIMESTAMP") as any,
-      onUpdate: Sequelize.literal("CURRENT_TIMESTAMP") as any,
-    },
   },
   {
     sequelize,
     modelName: "Roles",
     tableName: "roles",
     timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at",
+    underscored: true,
   }
 );
-
-// Roles.hasMany(Users, {
-//   foreignKey: "roleId", // Kolom FK di tabel Users
-//   as: "users", // Alias untuk query: role.getUsers()
-//   onDelete: "RESTRICT", // Mengunci: Tidak bisa menghapus role jika masih ada user
-// });
 
 export default Roles;
