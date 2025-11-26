@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import Users from "../models/users.model";
 import * as bcrypt from "bcrypt";
-import * as jwt from "jsonwebtoken";
-import { sendSuccess, sendError } from "../utils/response.utits";
+import { sendSuccess, sendError } from "../utils/response.utils";
+import { generateToken } from "../utils/jwt.utils";
 
 interface LoginBody {
   username: string;
@@ -38,9 +38,7 @@ class AuthController {
         username: user.username,
       };
 
-      const SECRET_KEY = process.env.JWT_SECRET || "rahasia_negara_api";
-
-      const token = jwt.sign(payload, SECRET_KEY, { expiresIn: "1d" });
+      const token = generateToken(payload);
 
       return sendSuccess(
         res,
@@ -56,6 +54,24 @@ class AuthController {
       );
     } catch (error) {
       return sendError(res, "Gagal Login", 500, error);
+    }
+  }
+
+  public postLogout(req: Response, res: Response): Response<Response> {
+    return sendSuccess(
+      res,
+      null,
+      "Logout Berhasil. Silakan hapus token di sisi client."
+    );
+  }
+
+  public async getMe(req: Request, res: Response): Promise<Response> {
+    try {
+      const user = (req as any).user;
+
+      return sendSuccess(res, user, "Token Valid. User sedang login.");
+    } catch (error) {
+      return sendError(res, "Gagal memuat data user", 500, error);
     }
   }
 }

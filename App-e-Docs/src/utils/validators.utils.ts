@@ -1,13 +1,9 @@
-// src/utils/validators.ts
-
 export interface ValidationResult {
   isValid: boolean;
   message?: string;
 }
 
-// --- VALIDASI USERNAME ---
 export const validateUsername = (username: string): ValidationResult => {
-  // 1. Cek Spasi (Haram hukumnya username ada spasi)
   if (/\s/.test(username)) {
     return {
       isValid: false,
@@ -15,8 +11,6 @@ export const validateUsername = (username: string): ValidationResult => {
     };
   }
 
-  // 2. Cek Simbol Aneh (Opsional, tapi disarankan biar URL aman)
-  // Hanya boleh Huruf, Angka, dan Underscore (_)
   if (!/^[a-zA-Z0-9_]+$/.test(username)) {
     return {
       isValid: false,
@@ -24,17 +18,43 @@ export const validateUsername = (username: string): ValidationResult => {
     };
   }
 
-  // 3. Cek Panjang
   if (username.length < 5) {
     return { isValid: false, message: "Username minimal 5 karakter." };
   }
 
-  // 4. Cek Huruf Kapital (Sesuai request kamu)
-  // Tapi ingat peringatan saya soal UX di atas ya :)
   if (!/[A-Z]/.test(username)) {
     return {
       isValid: false,
       message: "Username harus memiliki minimal 1 huruf kapital.",
+    };
+  }
+
+  return { isValid: true };
+};
+
+export const validatePassword = (password: string): ValidationResult => {
+  if (password.length < 8) {
+    return {
+      isValid: false,
+      message: "Password minimal harus 8 karakter.",
+    };
+  }
+
+  const uppercaseCount = (password.match(/[A-Z]/g) || []).length;
+  const lowercaseCount = (password.match(/[a-z]/g) || []).length;
+  const numberCount = (password.match(/[0-9]/g) || []).length;
+  const specialCharCount = (password.match(/[^a-zA-Z0-9]/g) || []).length;
+
+  if (
+    uppercaseCount < 1 ||
+    lowercaseCount < 1 ||
+    numberCount < 1 ||
+    specialCharCount < 1
+  ) {
+    return {
+      isValid: false,
+      message:
+        "Password harus mengandung minimal 1 huruf kapital, huruf kecil, angka, dan karakter spesial",
     };
   }
 

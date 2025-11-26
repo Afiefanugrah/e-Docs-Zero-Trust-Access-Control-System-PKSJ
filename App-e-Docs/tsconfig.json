@@ -55,12 +55,18 @@
     "outDir": "./dist" /* Output kompilasi */,
     "rootDir": "./src" /* Sumber TS */,
 
-    /* Kualitas Kode */
-    "strict": true /* Aktifkan semua pemeriksaan ketat */,
-    "skipLibCheck": true /* Lewati pemeriksaan jenis untuk node_modules */
+    // /* Kualitas Kode */
+    // "strict": true /* Aktifkan semua pemeriksaan ketat */,
+    // "skipLibCheck": true /* Lewati pemeriksaan jenis untuk node_modules */,
+
+    // /* --- TAMBAHAN PENTING (FIX ERROR USER) --- */
+    "typeRoots": [
+      "./node_modules/@types" /* 1. Tetap baca tipe bawaan library */,
+      "./src/types" /* 2. BACA TIPE BUATAN KITA (express.d.ts) */
+    ]
   },
 
   /* File yang Dikompilasi */
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/types/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

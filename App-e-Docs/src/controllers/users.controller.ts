@@ -3,9 +3,8 @@ import Users from "../models/users.model";
 import Roles from "../models/roles.model";
 import * as bcrypt from "bcrypt";
 
-import { sendSuccess, sendError } from "../utils/response.utits";
-import { validatePassword } from "../utils/validatePassword.utlis";
-import { validateUsername } from "../utils/validators.utils";
+import { sendSuccess, sendError } from "../utils/response.utils";
+import { validateUsername, validatePassword } from "../utils/validators.utils";
 
 interface createUserBody {
   username: string;
@@ -25,7 +24,7 @@ class UserController {
             attributes: ["name"],
           },
         ],
-        attributes: { exclude: ["passwordHash", "updatedAt"] },
+        attributes: { exclude: ["password", "updatedAt"] },
       });
 
       return sendSuccess(
@@ -70,7 +69,7 @@ class UserController {
       }
 
       const passwordCheck = validatePassword(password);
-      if (!passwordCheck.valid) {
+      if (!passwordCheck.isValid) {
         return sendError(res, passwordCheck.message || "Password lemah", 400);
       }
 
@@ -92,6 +91,27 @@ class UserController {
       };
 
       return sendSuccess(res, responseData, "Pengguna berhasil dibuat.", 201);
+    } catch (error) {
+      return sendError(res, "Gagal membuat pengguna", 500, error);
+    }
+  }
+
+  public async deleteUsers(req: Request, res: Response): Promise<Response> {
+    try {
+      const userId = parseInt(req.params.id, 10);
+
+      if (isNaN(userId)) {
+        return sendError(res, "ID pengguna tidak valid.", 400);
+      }
+
+      const user = await Users.findByPk(userId);
+      if (!user) {
+        return sendError(res, "Pengguna tidak ditemukan.", 404);
+      }
+
+      await user.destroy();
+
+      return sendSuccess(res, null, "Pengguna berhasil dihapus.");
     } catch (error) {
       return sendError(res, "Gagal membuat pengguna", 500, error);
     }
