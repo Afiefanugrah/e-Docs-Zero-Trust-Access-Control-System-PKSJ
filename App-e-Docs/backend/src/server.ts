@@ -1,5 +1,6 @@
 import express from "express";
 const PORT = process.env.PORT;
+import cors from "cors";
 
 // Db connettion
 import sequelize from "./config/db.config";
@@ -16,6 +17,14 @@ import documentEndpoint from "./routes/documents.route";
 // Middleware
 const app = express();
 app.use(express.json());
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"], // <-- BENAR: Setiap metode adalah item array
+    credentials: true,
+  })
+);
 
 app.use("/api/users", usersEndpoint);
 app.use("/api/auth", authEndpoint);
