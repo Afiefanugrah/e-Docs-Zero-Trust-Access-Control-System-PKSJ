@@ -10,6 +10,9 @@ import documentModel from "./models/documents.model";
 import auditLogModel from "./models/auditLogs.model";
 import { setupAssociations } from "./models/associations.model";
 
+// seeder
+import { seedRoles } from "./seeding/roles.seeding";
+
 // ambil file di routes
 import usersEndpoint from "./routes/users.route";
 import authEndpoint from "./routes/auth.route";
@@ -25,7 +28,7 @@ app.set("trust proxy", true);
 app.use(
   cors({
     origin: "http://localhost:3000",
-    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"], // <-- BENAR: Setiap metode adalah item array
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
     credentials: true,
   })
 );
@@ -46,6 +49,9 @@ async function initializeServer() {
     await userModel.sync({ alter: true });
     await documentModel.sync({ alter: true });
     await auditLogModel.sync({ alter: true });
+
+    await seedRoles();
+
     console.log("✅ Database disinkronkan. Tabel siap.");
 
     app.listen(PORT, () => {
