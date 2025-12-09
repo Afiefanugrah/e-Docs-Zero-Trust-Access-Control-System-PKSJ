@@ -45,9 +45,8 @@
 
 {
   "compilerOptions": {
-    /* Konfigurasi Lingkungan (CommonJS) */
-    "target": "es2020" /* Versi JS yang dihasilkan */,
-    "module": "commonjs" /* Sistem modul Node.js standar */,
+    "target": "es2020",
+    "module": "commonjs",
     "esModuleInterop": true /* Untuk impor yang mulus */,
     "forceConsistentCasingInFileNames": true,
 

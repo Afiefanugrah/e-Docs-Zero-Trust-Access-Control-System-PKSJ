@@ -3,12 +3,7 @@ import { Request } from "express";
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: number;
-        roleId: number;
-        username: string;
-      };
+      user?: { id: number; roleName: string; roleId: number };
     }
   }
 }
-
