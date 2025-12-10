@@ -23,7 +23,6 @@ import {
   FiToggleRight,
 } from "react-icons/fi";
 
-// Hapus MySwal = withReactContent(Swal);
 // Kita akan menggunakan Swal langsung
 
 const BASE_URL = "http://localhost:3200/api";
