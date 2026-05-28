@@ -59,7 +59,7 @@ Document.init({
     },
     created_by: {
         type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: "users",
             key: "id",
@@ -67,7 +67,7 @@ Document.init({
     },
     updated_by: {
         type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: "users",
             key: "id",

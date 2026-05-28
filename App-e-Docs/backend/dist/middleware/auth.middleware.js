@@ -52,7 +52,6 @@ const authenticateToken = (req, res, next) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
     if (!token) {
-        // Tidak perlu log audit di sini karena req tidak terautentikasi dan kita tangani di authorizeRole
         return (0, response_utils_1.sendError)(res, "Akses ditolak. Token tidak ditemukan.", 401);
     }
     const SECRET_KEY = process.env.JWT_SECRET || "rahasia_negara_api";
@@ -60,7 +59,6 @@ const authenticateToken = (req, res, next) => {
         if (err) {
             const ipAddress = (0, ipHelper_utils_1.getIpAddress)(req);
             let userIdFromToken = null;
-            // Coba ekstrak ID dari token yang expired untuk log yang lebih akurat
             try {
                 const decoded = jwt.decode(token);
                 userIdFromToken = decoded ? decoded.id : null;
@@ -68,7 +66,6 @@ const authenticateToken = (req, res, next) => {
             catch (e) {
                 // Gagal decode token (misalnya, format rusak)
             }
-            // LOG UTAMA KEGAGALAN AUTENTIKASI: Menggunakan ID dari token atau ID Default (1)
             auditLogs_model_1.default.create({
                 userId: userIdFromToken || DEFAULT_SYSTEM_USER_ID,
                 actionType: "AUTH_FAILED",
@@ -103,14 +100,10 @@ const authorizeRole = (allowedRoles) => {
         const actingUser = req.user;
         const ipAddress = (0, ipHelper_utils_1.getIpAddress)(req);
         const userRole = actingUser?.roleName;
-        // PERBAIKAN KRITIS: Jika user belum terautentikasi (actingUser?.id adalah undefined),
-        // gunakan ID 1 untuk mencegah 'notNull Violation'.
-        // Ini menangani kasus otorisasi yang gagal.
         const userId = actingUser?.id || DEFAULT_SYSTEM_USER_ID;
         if (!userRole) {
-            // Log kegagalan saat user sudah melewati authenticateToken tapi peran hilang
             await auditLogs_model_1.default.create({
-                userId: userId, // TIDAK LAGI NULL
+                userId: userId,
                 actionType: "AUTHENTICATION_FAILED",
                 tableName: "Authorization",
                 ipAddress: ipAddress,
@@ -127,9 +120,8 @@ const authorizeRole = (allowedRoles) => {
         if (allowedRoles.includes(userRole)) {
             return next();
         }
-        // Akses Ditolak (Peran tidak diizinkan)
         await auditLogs_model_1.default.create({
-            userId: userId, // TIDAK LAGI NULL
+            userId: userId,
             actionType: "ACCESS_DENIED",
             tableName: "Authorization",
             ipAddress: ipAddress,

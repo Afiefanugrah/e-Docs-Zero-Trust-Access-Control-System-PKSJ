@@ -13,7 +13,6 @@ const roleMap: Record<number, string> = {
   3: "admin",
 };
 
-// Extend Express Request
 declare global {
   namespace Express {
     interface Request {
@@ -31,7 +30,6 @@ export const authenticateToken = (
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    // Tidak perlu log audit di sini karena req tidak terautentikasi dan kita tangani di authorizeRole
     return sendError(res, "Akses ditolak. Token tidak ditemukan.", 401);
   }
 
@@ -42,7 +40,6 @@ export const authenticateToken = (
       const ipAddress = getIpAddress(req);
       let userIdFromToken: number | null = null;
 
-      // Coba ekstrak ID dari token yang expired untuk log yang lebih akurat
       try {
         const decoded = jwt.decode(token) as { id: number };
         userIdFromToken = decoded ? decoded.id : null;
@@ -50,7 +47,6 @@ export const authenticateToken = (
         // Gagal decode token (misalnya, format rusak)
       }
 
-      // LOG UTAMA KEGAGALAN AUTENTIKASI: Menggunakan ID dari token atau ID Default (1)
       AuditLog.create({
         userId: userIdFromToken || DEFAULT_SYSTEM_USER_ID,
         actionType: "AUTH_FAILED",
@@ -97,15 +93,11 @@ export const authorizeRole = (allowedRoles: string[]) => {
 
     const userRole = actingUser?.roleName;
 
-    // PERBAIKAN KRITIS: Jika user belum terautentikasi (actingUser?.id adalah undefined),
-    // gunakan ID 1 untuk mencegah 'notNull Violation'.
-    // Ini menangani kasus otorisasi yang gagal.
     const userId = actingUser?.id || DEFAULT_SYSTEM_USER_ID;
 
     if (!userRole) {
-      // Log kegagalan saat user sudah melewati authenticateToken tapi peran hilang
       await AuditLog.create({
-        userId: userId, // TIDAK LAGI NULL
+        userId: userId,
         actionType: "AUTHENTICATION_FAILED",
         tableName: "Authorization",
         ipAddress: ipAddress,
@@ -129,9 +121,8 @@ export const authorizeRole = (allowedRoles: string[]) => {
       return next();
     }
 
-    // Akses Ditolak (Peran tidak diizinkan)
     await AuditLog.create({
-      userId: userId, // TIDAK LAGI NULL
+      userId: userId,
       actionType: "ACCESS_DENIED",
       tableName: "Authorization",
       ipAddress: ipAddress,

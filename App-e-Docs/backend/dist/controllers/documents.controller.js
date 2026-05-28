@@ -455,5 +455,56 @@ class DocumentsController {
             return (0, response_utils_1.sendError)(res, "Gagal memperbarui dokumen.", 500, error);
         }
     }
+    // Tambahkan kode ini di dalam class DocumentsController
+    async deleteDocumentBySlug(req, res) {
+        const actingUser = req.user;
+        const ipAddress = (0, ipHelper_utils_1.getIpAddress)(req);
+        const userId = actingUser.id;
+        const slugToDelete = req.params.slug;
+        if (!slugToDelete) {
+            return (0, response_utils_1.sendError)(res, "Slug dokumen tidak diberikan.", 400);
+        }
+        try {
+            // 1. Ambil Dokumen yang Ada
+            const document = await documents_model_1.default.findOne({
+                where: { slug: slugToDelete },
+            });
+            if (!document) {
+                await auditLogs_model_1.default.create({
+                    userId: userId,
+                    actionType: "DELETE_DOCUMENT_FAILED",
+                    tableName: "Documents",
+                    recordId: null,
+                    ipAddress: ipAddress,
+                    details: {
+                        reason: "Dokumen target tidak ditemukan (404)",
+                        slug: slugToDelete,
+                        userRole: actingUser.roleName,
+                    },
+                });
+                return (0, response_utils_1.sendError)(res, "Dokumen tidak ditemukan.", 404);
+            }
+            const documentTitle = document.title;
+            await document.destroy(); // Menghapus record
+            await auditLogs_model_1.default.create({
+                userId: userId,
+                actionType: "DOCUMENT_DELETED",
+                tableName: "Documents",
+                recordId: document.id,
+                ipAddress: ipAddress,
+                details: {
+                    deletedTitle: documentTitle,
+                    deletedSlug: slugToDelete,
+                    userRole: actingUser.roleName,
+                    deletedStatus: document.status,
+                },
+            });
+            // 4. Siapkan Response
+            return (0, response_utils_1.sendSuccess)(res, null, `Dokumen "${documentTitle}" berhasil dihapus.`, 200);
+        }
+        catch (error) {
+            return (0, response_utils_1.sendError)(res, "Gagal menghapus dokumen.", 500, error);
+        }
+    }
 }
 exports.default = new DocumentsController();

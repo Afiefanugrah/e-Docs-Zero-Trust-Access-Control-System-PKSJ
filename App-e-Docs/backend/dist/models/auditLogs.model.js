@@ -16,7 +16,7 @@ AuditLog.init({
     },
     userId: {
         type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: "users",
             key: "id",

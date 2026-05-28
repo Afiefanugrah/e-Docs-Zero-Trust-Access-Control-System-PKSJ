@@ -14,6 +14,13 @@ router.get(
   documentsController.getAllDocuments.bind(documentsController)
 );
 
+router.post(
+  "/create",
+  authenticateToken,
+  authorizeRole(["admin", "editor"]),
+  documentsController.createDocument.bind(documentsController)
+);
+
 router.get(
   "/:id",
   authenticateToken,
@@ -26,13 +33,6 @@ router.get(
   authenticateToken,
   authorizeRole(["all"]),
   documentsController.getDocumentBySlug.bind(documentsController)
-);
-
-router.post(
-  "/create",
-  authenticateToken,
-  authorizeRole(["admin", "editor"]),
-  documentsController.createDocument.bind(documentsController)
 );
 
 router.put(
