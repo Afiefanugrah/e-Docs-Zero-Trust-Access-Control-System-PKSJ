@@ -28,7 +28,7 @@ class AuditController {
                 userId: actingUser.id,
                 actionType: "VIEW_AUDIT_LOGS",
                 tableName: "AuditLogs",
-                recordId: null,
+                recordId: undefined,
                 ipAddress: ipAddress,
                 details: {
                     endpoint: "/api/audit/all",

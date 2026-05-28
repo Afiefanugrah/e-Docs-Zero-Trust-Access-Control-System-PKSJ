@@ -58,7 +58,7 @@ class DocumentsController {
         userId: actingUser.id,
         actionType: "READ_ALL_DOCUMENTS",
         tableName: "Documents",
-        recordId: null,
+        recordId: undefined,
         ipAddress: ipAddress,
         details: {
           endpoint: "/api/documents/all",
@@ -74,7 +74,7 @@ class DocumentsController {
         200,
         {
           total: documents.length,
-        }
+        },
       );
     } catch (error) {
       // console.error("Error saat mengambil daftar dokumen:", error);
@@ -133,7 +133,7 @@ class DocumentsController {
         res,
         document,
         "Detail dokumen berhasil diambil.",
-        200
+        200,
       );
     } catch (error) {
       console.error(`Error saat mengambil dokumen ID ${req.params.id}:`, error);
@@ -145,7 +145,7 @@ class DocumentsController {
 
   public async getDocumentBySlug(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<Response> {
     // Ambil slug dari parameter URL (misalnya, req.params.slug)
     const slug = req.params.slug;
@@ -176,7 +176,7 @@ class DocumentsController {
           userId: actingUser.id,
           actionType: "READ_DOCUMENT_FAILED",
           tableName: "Documents",
-          recordId: null,
+          recordId: undefined,
           ipAddress: ipAddress,
           details: {
             reason: "Dokumen tidak ditemukan (404)",
@@ -207,7 +207,7 @@ class DocumentsController {
         res,
         document,
         "Detail dokumen berhasil diambil.",
-        200
+        200,
       );
     } catch (error) {
       console.error(`Error saat mengambil dokumen (Slug: ${slug}):`, error);
@@ -217,7 +217,7 @@ class DocumentsController {
         userId: actingUser.id,
         actionType: "READ_DOCUMENT_ERROR",
         tableName: "Documents",
-        recordId: null,
+        recordId: undefined,
         ipAddress: ipAddress,
         details: {
           error: (error as Error).message,
@@ -245,7 +245,7 @@ class DocumentsController {
           userId: userId,
           actionType: "CREATE_DOCUMENT_FAILED",
           tableName: "Documents",
-          recordId: null,
+          recordId: undefined,
           ipAddress: ipAddress,
           details: {
             reason: "Judul atau konten kosong",
@@ -263,7 +263,7 @@ class DocumentsController {
           userId: userId,
           actionType: "CREATE_DOCUMENT_FAILED",
           tableName: "Documents",
-          recordId: null,
+          recordId: undefined,
           ipAddress: ipAddress,
           details: {
             reason: "Slug sudah digunakan",
@@ -274,7 +274,7 @@ class DocumentsController {
         return sendError(
           res,
           "Judul dokumen sudah ada. Ubah judul sedikit.",
-          409
+          409,
         );
       }
 
@@ -284,7 +284,7 @@ class DocumentsController {
       const newDocument = await Documents.create({
         title,
         slug,
-        description: description || null,
+        description: description || "",
         markdown_content,
         // Status diambil dari enum yang diimpor dari model
         status: DocumentStatus.Draft,
@@ -323,7 +323,7 @@ class DocumentsController {
         res,
         responseData,
         "Dokumen berhasil dibuat dan disimpan sebagai Draft.",
-        201
+        201,
       );
     } catch (error) {
       console.error("Error saat membuat dokumen:", error);
@@ -344,7 +344,7 @@ class DocumentsController {
         return sendError(
           res,
           "Tidak ada data yang dikirim untuk pembaruan.",
-          400
+          400,
         );
       }
 
@@ -366,7 +366,7 @@ class DocumentsController {
         return sendError(
           res,
           "Dokumen sudah disetujui (Approved) dan tidak dapat diedit.",
-          403
+          403,
         );
       }
       // Tambahkan cek kepemilikan jika diperlukan (e.g., Editor hanya boleh edit milik sendiri)
@@ -411,12 +411,12 @@ class DocumentsController {
         res,
         responseData,
         "Dokumen berhasil diperbarui.",
-        200
+        200,
       );
     } catch (error) {
       console.error(
         `Error saat mengupdate dokumen ID ${req.params.id}:`,
-        error
+        error,
       );
       return sendError(res, "Gagal memperbarui dokumen.", 500, error);
     }
@@ -424,7 +424,7 @@ class DocumentsController {
 
   public async updateDocumentBySlug(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<Response> {
     const actingUser = (req as any).user;
     const ipAddress = getIpAddress(req);
@@ -441,7 +441,7 @@ class DocumentsController {
         return sendError(
           res,
           "Tidak ada data yang dikirim untuk pembaruan.",
-          400
+          400,
         );
       }
 
@@ -475,7 +475,7 @@ class DocumentsController {
         return sendError(
           res,
           "Dokumen sudah disetujui (Approved) dan tidak dapat diedit oleh Anda.",
-          403
+          403,
         );
       }
 
@@ -505,7 +505,7 @@ class DocumentsController {
           return sendError(
             res,
             `Judul baru menghasilkan slug (${newSlug}) yang sudah digunakan oleh dokumen lain. Ubah judul sedikit.`,
-            409
+            409,
           );
         }
       }
@@ -547,21 +547,21 @@ class DocumentsController {
         res,
         responseData,
         "Dokumen berhasil diperbarui.",
-        200
+        200,
       );
     } catch (error) {
       console.error(
         `Error saat mengupdate dokumen slug ${req.params.slug}:`,
-        error
+        error,
       );
       // Log Audit untuk error 500
       await AuditLog.create({
         userId: userId,
         actionType: "UPDATE_DOCUMENT_ERROR",
         tableName: "Documents",
-        recordId: null,
+        recordId: undefined,
         ipAddress: ipAddress,
-        details: { reason: "Gagal memproses update", error: error.message },
+        details: { reason: "Gagal memproses update", error: "error.message" },
       });
       return sendError(res, "Gagal memperbarui dokumen.", 500, error);
     }
@@ -571,7 +571,7 @@ class DocumentsController {
 
   public async deleteDocumentBySlug(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<Response> {
     const actingUser = (req as any).user;
     const ipAddress = getIpAddress(req);
@@ -593,7 +593,7 @@ class DocumentsController {
           userId: userId,
           actionType: "DELETE_DOCUMENT_FAILED",
           tableName: "Documents",
-          recordId: null,
+          recordId: undefined,
           ipAddress: ipAddress,
           details: {
             reason: "Dokumen target tidak ditemukan (404)",
@@ -626,7 +626,7 @@ class DocumentsController {
         res,
         null,
         `Dokumen "${documentTitle}" berhasil dihapus.`,
-        200
+        200,
       );
     } catch (error) {
       return sendError(res, "Gagal menghapus dokumen.", 500, error);

@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "main": "server.ts",
   "scripts": {
-    "dev1": "nodemon src/server.ts",
     "dev": "nodemon --exec ts-node -r dotenv/config src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node -r dotenv/config dist/server.js",
     "seed": "ts-node -r dotenv/config src/test.ts"
   },
   "repository": {
@@ -35,6 +34,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",

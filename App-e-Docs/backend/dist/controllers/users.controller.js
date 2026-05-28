@@ -63,7 +63,7 @@ class UserController {
                 userId: actingUser.id,
                 actionType: "READ_ALL_USERS",
                 tableName: "Users",
-                recordId: null,
+                recordId: undefined,
                 ipAddress: ipAddress,
                 details: {
                     endpoint: "/api/users/all",
@@ -88,10 +88,10 @@ class UserController {
             const cekUsername = await users_model_1.default.findOne({ where: { username } });
             if (cekUsername) {
                 await auditLogs_model_1.default.create({
-                    userId: null,
+                    userId: cekUsername.id,
                     actionType: "REGISTRATION_FAILED",
                     tableName: "Users",
-                    recordId: null,
+                    recordId: undefined,
                     ipAddress: ipAddress,
                     details: {
                         reason: "Username sudah digunakan",
@@ -103,10 +103,10 @@ class UserController {
             const usernameCheck = (0, validators_utils_1.validateUsername)(username);
             if (!usernameCheck.isValid) {
                 await auditLogs_model_1.default.create({
-                    userId: null,
+                    userId: 0,
                     actionType: "REGISTRATION_FAILED",
                     tableName: "Users",
-                    recordId: null,
+                    recordId: undefined,
                     ipAddress: ipAddress,
                     details: {
                         reason: usernameCheck.message || "Password lemah",
@@ -119,10 +119,10 @@ class UserController {
             if (!passwordCheck.isValid) {
                 const ipAddress = (0, ipHelper_utils_1.getIpAddress)(req);
                 await auditLogs_model_1.default.create({
-                    userId: null,
+                    userId: 0,
                     actionType: "REGISTRATION_FAILED",
                     tableName: "Users",
-                    recordId: null,
+                    recordId: undefined,
                     ipAddress: ipAddress,
                     details: {
                         reason: passwordCheck.message || "Password lemah",
@@ -137,6 +137,7 @@ class UserController {
                 password: passwordHash,
                 roleId,
                 isActive,
+                failedAttemptCount: 0,
             });
             await auditLogs_model_1.default.create({
                 userId: newUser.id,

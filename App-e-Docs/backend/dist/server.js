@@ -38,12 +38,17 @@ async function initializeServer() {
         await db_config_1.default.authenticate();
         console.log("✅ Koneksi database berhasil.");
         (0, associations_model_1.setupAssociations)();
-        await roles_model_1.default.sync({ alter: true });
-        await users_model_1.default.sync({ alter: true });
-        await documents_model_1.default.sync({ alter: true });
-        await auditLogs_model_1.default.sync({ alter: true });
+        // SEMENTARA ganti jadi force: true untuk menghapus tumpukan indeks sampah
+        // await roleModel.sync({ force: true });
+        // await userModel.sync({ force: true });
+        // await documentModel.sync({ force: true });
+        // await auditLogModel.sync({ force: true });
+        await roles_model_1.default.sync();
+        await users_model_1.default.sync();
+        await documents_model_1.default.sync();
+        await auditLogs_model_1.default.sync();
         await (0, roles_seeding_1.seedRoles)();
-        console.log("✅ Database disinkronkan. Tabel siap.");
+        console.log("✅ Database telah di-RESET dan disinkronkan ulang dengan bersih.");
         app.listen(PORT, () => {
             console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
         });

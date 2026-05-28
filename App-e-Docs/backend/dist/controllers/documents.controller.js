@@ -78,7 +78,7 @@ class DocumentsController {
                 userId: actingUser.id,
                 actionType: "READ_ALL_DOCUMENTS",
                 tableName: "Documents",
-                recordId: null,
+                recordId: undefined,
                 ipAddress: ipAddress,
                 details: {
                     endpoint: "/api/documents/all",
@@ -170,7 +170,7 @@ class DocumentsController {
                     userId: actingUser.id,
                     actionType: "READ_DOCUMENT_FAILED",
                     tableName: "Documents",
-                    recordId: null,
+                    recordId: undefined,
                     ipAddress: ipAddress,
                     details: {
                         reason: "Dokumen tidak ditemukan (404)",
@@ -203,7 +203,7 @@ class DocumentsController {
                 userId: actingUser.id,
                 actionType: "READ_DOCUMENT_ERROR",
                 tableName: "Documents",
-                recordId: null,
+                recordId: undefined,
                 ipAddress: ipAddress,
                 details: {
                     error: error.message,
@@ -226,7 +226,7 @@ class DocumentsController {
                     userId: userId,
                     actionType: "CREATE_DOCUMENT_FAILED",
                     tableName: "Documents",
-                    recordId: null,
+                    recordId: undefined,
                     ipAddress: ipAddress,
                     details: {
                         reason: "Judul atau konten kosong",
@@ -242,7 +242,7 @@ class DocumentsController {
                     userId: userId,
                     actionType: "CREATE_DOCUMENT_FAILED",
                     tableName: "Documents",
-                    recordId: null,
+                    recordId: undefined,
                     ipAddress: ipAddress,
                     details: {
                         reason: "Slug sudah digunakan",
@@ -257,7 +257,7 @@ class DocumentsController {
             const newDocument = await documents_model_1.default.create({
                 title,
                 slug,
-                description: description || null,
+                description: description || "",
                 markdown_content,
                 // Status diambil dari enum yang diimpor dari model
                 status: documents_model_1.DocumentStatus.Draft,
@@ -448,9 +448,9 @@ class DocumentsController {
                 userId: userId,
                 actionType: "UPDATE_DOCUMENT_ERROR",
                 tableName: "Documents",
-                recordId: null,
+                recordId: undefined,
                 ipAddress: ipAddress,
-                details: { reason: "Gagal memproses update", error: error.message },
+                details: { reason: "Gagal memproses update", error: "error.message" },
             });
             return (0, response_utils_1.sendError)(res, "Gagal memperbarui dokumen.", 500, error);
         }
@@ -474,7 +474,7 @@ class DocumentsController {
                     userId: userId,
                     actionType: "DELETE_DOCUMENT_FAILED",
                     tableName: "Documents",
-                    recordId: null,
+                    recordId: undefined,
                     ipAddress: ipAddress,
                     details: {
                         reason: "Dokumen target tidak ditemukan (404)",

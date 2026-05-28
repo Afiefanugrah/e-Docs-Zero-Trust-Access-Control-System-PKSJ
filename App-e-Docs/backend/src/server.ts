@@ -30,7 +30,7 @@ app.use(
     origin: ["http://localhost:3000", "http://192.168.10.190:3000"],
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
     credentials: true,
-  })
+  }),
 );
 
 app.use("/api/users", usersEndpoint);
@@ -45,21 +45,28 @@ async function initializeServer() {
 
     setupAssociations();
 
-    await roleModel.sync({ alter: true });
-    await userModel.sync({ alter: true });
-    await documentModel.sync({ alter: true });
-    await auditLogModel.sync({ alter: true });
+    // SEMENTARA ganti jadi force: true untuk menghapus tumpukan indeks sampah
+    // await roleModel.sync({ force: true });
+    // await userModel.sync({ force: true });
+    // await documentModel.sync({ force: true });
+    // await auditLogModel.sync({ force: true });
+
+    await roleModel.sync();
+    await userModel.sync();
+    await documentModel.sync();
+    await auditLogModel.sync();
 
     await seedRoles();
 
-    console.log("✅ Database disinkronkan. Tabel siap.");
+    console.log(
+      "✅ Database telah di-RESET dan disinkronkan ulang dengan bersih.",
+    );
 
     app.listen(PORT, () => {
       console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error("❌ Gagal memulai server atau inisialisasi database:", error);
-
     process.exit(1);
   }
 }

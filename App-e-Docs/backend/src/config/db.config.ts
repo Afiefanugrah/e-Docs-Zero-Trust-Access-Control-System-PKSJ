@@ -6,9 +6,10 @@ const sequelize = new Sequelize(
   process.env.DB_PASS as string,
   {
     host: process.env.DB_HOST as string,
-    dialect: process.env.DB_DIALECT as any,
+    // dialect: process.env.DB_DIALECT as any,
+    dialect: "mysql",
     logging: false,
-  }
+  },
 );
 
 export default sequelize;

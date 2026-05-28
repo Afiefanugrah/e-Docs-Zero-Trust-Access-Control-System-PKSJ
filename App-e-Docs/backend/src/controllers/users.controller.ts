@@ -41,7 +41,7 @@ class UserController {
         userId: actingUser.id,
         actionType: "READ_ALL_USERS",
         tableName: "Users",
-        recordId: null,
+        recordId: undefined,
         ipAddress: ipAddress,
         details: {
           endpoint: "/api/users/all",
@@ -56,7 +56,7 @@ class UserController {
         200,
         {
           total: users.length,
-        }
+        },
       );
     } catch (error) {
       return sendError(res, "Gagal Mengambil data pengguna", 500, error);
@@ -65,7 +65,7 @@ class UserController {
 
   public async postRegisterUsers(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<Response> {
     try {
       const { username, password, roleId, isActive } =
@@ -81,10 +81,10 @@ class UserController {
 
       if (cekUsername) {
         await AuditLog.create({
-          userId: null,
+          userId: cekUsername.id,
           actionType: "REGISTRATION_FAILED",
           tableName: "Users",
-          recordId: null,
+          recordId: undefined,
           ipAddress: ipAddress,
           details: {
             reason: "Username sudah digunakan",
@@ -95,17 +95,17 @@ class UserController {
         return sendError(
           res,
           "Username sudah digunakan. Silakan pilih yang lain.",
-          409
+          409,
         );
       }
 
       const usernameCheck = validateUsername(username);
       if (!usernameCheck.isValid) {
         await AuditLog.create({
-          userId: null,
+          userId: 0,
           actionType: "REGISTRATION_FAILED",
           tableName: "Users",
-          recordId: null,
+          recordId: undefined,
           ipAddress: ipAddress,
           details: {
             reason: usernameCheck.message || "Password lemah",
@@ -120,10 +120,10 @@ class UserController {
         const ipAddress = getIpAddress(req);
 
         await AuditLog.create({
-          userId: null,
+          userId: 0,
           actionType: "REGISTRATION_FAILED",
           tableName: "Users",
-          recordId: null,
+          recordId: undefined,
           ipAddress: ipAddress,
           details: {
             reason: passwordCheck.message || "Password lemah",
@@ -140,6 +140,7 @@ class UserController {
         password: passwordHash,
         roleId,
         isActive,
+        failedAttemptCount: 0,
       });
 
       await AuditLog.create({
@@ -170,7 +171,7 @@ class UserController {
 
   public async toggleActiveStatus(
     req: Request,
-    res: Response
+    res: Response,
   ): Promise<Response> {
     const actingUser = (req as any).user;
     const ipAddress = getIpAddress(req);
@@ -198,7 +199,7 @@ class UserController {
       return sendError(
         res,
         "Anda tidak dapat menonaktifkan akun Admin Anda sendiri.",
-        403
+        403,
       );
     }
 
@@ -237,7 +238,7 @@ class UserController {
         `Status pengguna ${user.username} berhasil diubah menjadi ${
           newStatus ? "Aktif" : "Nonaktif"
         }.`,
-        200
+        200,
       );
     } catch (error) {
       console.error("Error saat toggle active status:", error);
