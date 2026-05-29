@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Swal, { SweetAlertResult } from "sweetalert2";
+import { isTokenExpired, clearSession, handleSessionExpired as sharedHandleSessionExpired } from "@/utils/auth";
 import {
   FiLogOut,
   FiUsers,
@@ -21,6 +22,7 @@ import {
   FiAlertTriangle,
   FiToggleLeft,
   FiToggleRight,
+  FiRefreshCw,
 } from "react-icons/fi";
 
 // Kita akan menggunakan Swal langsung
@@ -74,18 +76,23 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center px-3 py-2 rounded-lg transition duration-150 
+    className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-300 transform hover:translate-x-1 group relative overflow-hidden cursor-pointer
             ${
               isActive
-                ? "bg-red-600 text-white font-bold"
-                : isLink
-                ? "hover:bg-gray-700 text-gray-300"
-                : "hover:bg-gray-700 text-gray-100"
+                ? "bg-gradient-to-r from-red-600 to-rose-500 text-white font-semibold shadow-lg shadow-red-500/20"
+                : "text-gray-400 hover:text-white hover:bg-gray-800/50"
             }
         `}
   >
-    {React.cloneElement(icon, { className: "mr-3 w-5 h-5" })}
-    {title}
+    {isActive && (
+      <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-white rounded-r-md"></span>
+    )}
+    
+    <div className={`mr-3 transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-white" : "text-gray-400 group-hover:text-red-400"}`}>
+      {React.cloneElement(icon, { className: "w-5 h-5" })}
+    </div>
+    
+    <span className="text-sm font-medium tracking-wide">{title}</span>
   </button>
 );
 
@@ -95,6 +102,7 @@ interface AdminSidebarProps {
   setCurrentView: (view: "users" | "audit") => void;
   handleLogout: () => void;
   router: ReturnType<typeof useRouter>;
+  adminUsername: string;
 }
 
 const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -102,13 +110,25 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
   setCurrentView,
   handleLogout,
   router,
+  adminUsername,
 }) => (
-  <aside className="w-64 bg-gray-800 text-white flex flex-col p-4 shadow-xl h-screen shrink-0 sticky top-0">
-    <h1 className="text-2xl font-bold mb-8 text-red-400 flex items-center">
-      <FiSettings className="mr-2" /> Admin Panel
-    </h1>
+  <aside className="w-64 bg-gray-950 text-white flex flex-col p-5 shadow-2xl h-screen shrink-0 sticky top-0 border-r border-gray-800/80">
+    <div className="mb-8 mt-2">
+      <h1 className="text-2xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-rose-400 flex items-center">
+        <FiSettings className="mr-2.5 text-red-500 transition-transform duration-700 hover:rotate-90" /> Admin Panel
+      </h1>
+      <div className="flex items-center mt-2.5 ml-0.5 space-x-2">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+        </span>
+        <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500">Zero Trust Active</span>
+      </div>
+    </div>
 
     <nav className="grow space-y-2">
+      <p className="text-[11px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-3">Menu Dashboard</p>
+      
       <SidebarItem
         icon={<FiUsers />}
         title="Manajemen Pengguna"
@@ -122,7 +142,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
         onClick={() => setCurrentView("audit")}
       />
 
-      <div className="border-t border-gray-700 pt-4 mt-4">
+      <div className="border-t border-gray-800 pt-5 mt-5">
+        <p className="text-[11px] font-bold text-gray-600 uppercase tracking-widest px-2 mb-3">Navigasi</p>
         <SidebarItem
           icon={<FiList />}
           title="Kembali ke Dokumen"
@@ -132,13 +153,27 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
     </nav>
 
-    <button
-      onClick={handleLogout}
-      className="flex items-center justify-center w-full py-2 mt-4 bg-red-700 rounded-lg hover:bg-red-800 transition"
-    >
-      <FiLogOut className="mr-2" />
-      Logout
-    </button>
+    <div className="mt-auto border-t border-gray-800 pt-5 space-y-4">
+      <div className="flex items-center space-x-3 bg-gray-900/60 p-3 rounded-xl border border-gray-800/40">
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center font-bold text-white shadow-md shadow-red-500/10">
+          {adminUsername.substring(0, 2).toUpperCase()}
+        </div>
+        <div className="overflow-hidden">
+          <p className="text-sm font-semibold text-gray-200 truncate">{adminUsername}</p>
+          <span className="inline-block px-2 py-0.5 mt-0.5 text-[9px] font-bold uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20 rounded-md">
+            Administrator
+          </span>
+        </div>
+      </div>
+
+      <button
+        onClick={handleLogout}
+        className="w-full flex items-center justify-center py-3 bg-gray-900 hover:bg-red-750 text-gray-300 hover:text-white rounded-xl text-sm font-semibold border border-gray-800 hover:border-red-650 transition-all duration-300 shadow-md hover:shadow-red-950/20 cursor-pointer"
+      >
+        <FiLogOut className="mr-2 w-4 h-4" />
+        Keluar Sistem
+      </button>
+    </div>
   </aside>
 );
 
@@ -407,10 +442,17 @@ const AdminDashboardPage: React.FC = () => {
   const [currentView, setCurrentView] = useState<"users" | "audit">("users");
   const [token, setToken] = useState<string | null>(null);
   const [adminId, setAdminId] = useState<number>(0);
+  const [adminUsername, setAdminUsername] = useState<string>("Admin");
 
   const [users, setUsers] = useState<UserListItem[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [userCount, setUserCount] = useState<number>(0);
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(false);
+
+  // --- Fungsi Penanganan Sesi Kedaluwarsa ---
+  const handleSessionExpired = () => {
+    sharedHandleSessionExpired(router, Swal);
+  };
 
   // --- Fungsi menampilkan SweetAlert2 (Toast) ---
   const showSwalAlert = (
@@ -438,12 +480,18 @@ const AdminDashboardPage: React.FC = () => {
 
   // --- Proteksi dan Validasi Role (HANYA ADMIN) ---
   useEffect(() => {
-    const authToken = localStorage.getItem("authToken");
-    const userRole = localStorage.getItem("userRole");
-    const userId = localStorage.getItem("userId");
+    const authToken = sessionStorage.getItem("authToken") || localStorage.getItem("authToken");
+    const userRole = sessionStorage.getItem("userRole") || localStorage.getItem("userRole");
+    const userId = sessionStorage.getItem("userId") || localStorage.getItem("userId");
 
     if (!authToken) {
       router.push("/login");
+      return;
+    }
+
+    // Periksa kedaluwarsa token di sisi client sebelum lanjut
+    if (isTokenExpired(authToken)) {
+      sharedHandleSessionExpired(router, Swal);
       return;
     }
 
@@ -460,22 +508,60 @@ const AdminDashboardPage: React.FC = () => {
       return;
     }
 
+    // Ekstrak nama admin dari token secara aman
+    try {
+      const parts = authToken.split(".");
+      if (parts.length === 3) {
+        const payloadBase64 = parts[1];
+        const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+        const decodedPayload = JSON.parse(
+          decodeURIComponent(
+            atob(base64)
+              .split("")
+              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+              .join("")
+          )
+        );
+        if (decodedPayload.username) {
+          setAdminUsername(decodedPayload.username);
+        }
+      }
+    } catch (e) {
+      console.error("Gagal mengekstrak nama admin:", e);
+    }
+
     // Set token dan ID Admin
     setToken(authToken);
     setAdminId(userId ? parseInt(userId, 10) : 0);
     setLoading(false);
   }, [router]);
 
-  // --- Pemuatan Data Khusus Admin ---
+  // --- Pemuatan Data Khusus Admin (dengan Auto-Refresh / Polling 10 Detik Opsional) ---
   useEffect(() => {
-    if (token) {
+    if (!token) return;
+
+    // Fetch pertama kali saat masuk view
+    if (currentView === "users") {
+      fetchUsers(token);
+    } else if (currentView === "audit") {
+      fetchAuditLogs(token);
+    }
+
+    if (!autoRefresh) return; // 🛡️ Jangan jalankan polling jika Auto-Refresh dinonaktifkan
+
+    // Auto-refresh data setiap 10 detik agar admin mendapat update secara berkala
+    const intervalId = setInterval(() => {
       if (currentView === "users") {
         fetchUsers(token);
       } else if (currentView === "audit") {
         fetchAuditLogs(token);
       }
-    }
-  }, [token, currentView]);
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [token, currentView, autoRefresh]);
 
   // --- Logika Fetch Data Pengguna (/api/users/all) ---
   const fetchUsers = async (authToken: string) => {
@@ -483,6 +569,10 @@ const AdminDashboardPage: React.FC = () => {
       const response = await fetch(`${BASE_URL}/users/all`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       if (!response.ok) throw new Error("Gagal memuat data pengguna.");
 
       const data = await response.json();
@@ -500,6 +590,10 @@ const AdminDashboardPage: React.FC = () => {
       const response = await fetch(`${BASE_URL}/audit/all`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
       if (!response.ok) throw new Error("Gagal memuat data audit.");
 
       const data = await response.json();
@@ -539,6 +633,11 @@ const AdminDashboardPage: React.FC = () => {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           });
+
+          if (response.status === 401) {
+            handleSessionExpired();
+            return;
+          }
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({
@@ -607,6 +706,11 @@ const AdminDashboardPage: React.FC = () => {
             }
           );
 
+          if (response.status === 401) {
+            handleSessionExpired();
+            return;
+          }
+
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({
               message: `Gagal ${action.toLowerCase()} pengguna.`,
@@ -641,9 +745,7 @@ const AdminDashboardPage: React.FC = () => {
 
   // --- LOGIKA LOGOUT (Tetap Sama) ---
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
-    localStorage.removeItem("userId");
+    clearSession();
     router.push("/login");
   };
 
@@ -668,15 +770,41 @@ const AdminDashboardPage: React.FC = () => {
         setCurrentView={setCurrentView}
         handleLogout={handleLogout}
         router={router}
+        adminUsername={adminUsername}
       />
 
       {/* --- KONTEN UTAMA --- */}
       <main className="grow p-8">
-        <h2 className="text-3xl font-extrabold text-gray-800 mb-6">
-          {currentView === "users"
-            ? "Manajemen Pengguna"
-            : "Log Aktivitas Sistem (Audit Log)"}
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 border-b pb-4">
+          <h2 className="text-3xl font-extrabold text-gray-800">
+            {currentView === "users"
+              ? "Manajemen Pengguna"
+              : "Log Aktivitas Sistem (Audit Log)"}
+          </h2>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => {
+                if (token) {
+                  if (currentView === "users") fetchUsers(token);
+                  else if (currentView === "audit") fetchAuditLogs(token);
+                }
+              }}
+              className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-semibold shadow-sm transition cursor-pointer"
+              title="Refresh Data Sekarang"
+            >
+              <FiRefreshCw className="mr-2 w-4 h-4 text-gray-500" /> Sync / Refresh
+            </button>
+            <label className="flex items-center space-x-2 text-sm text-gray-600 font-semibold cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+              />
+              <span>Auto-Refresh (10s)</span>
+            </label>
+          </div>
+        </div>
 
         {currentView === "users" && (
           <UserManagementView
