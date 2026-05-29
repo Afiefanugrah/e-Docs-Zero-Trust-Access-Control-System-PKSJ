@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
+import { isTokenExpired, clearSession, handleSessionExpired } from "@/utils/auth";
 import {
   FiArrowLeft,
   FiSave,
@@ -230,21 +232,31 @@ const CreateDocumentPage: React.FC = () => {
 
   // --- PROTEKSI ROLE (RBAC) ---
   useEffect(() => {
-    const authToken = localStorage.getItem("authToken");
+    const authToken = sessionStorage.getItem("authToken") || localStorage.getItem("authToken");
     const userRole =
-      typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("userRole") || localStorage.getItem("userRole")
+        : null;
 
     if (!authToken) {
       router.push("/login");
       return;
     }
 
+    // Periksa kedaluwarsa token di sisi client sebelum lanjut
+    if (isTokenExpired(authToken)) {
+      handleSessionExpired(router, Swal);
+      return;
+    }
+
     if (!userRole || !CREATOR_ROLES.includes(userRole)) {
-      alert(
-        `Akses Ditolak! Halaman ini hanya untuk peran ${CREATOR_ROLES.join(
-          " atau "
-        )}.`
-      );
+      Swal.fire({
+        icon: "error",
+        title: "Akses Ditolak!",
+        text: `Halaman ini hanya untuk peran ${CREATOR_ROLES.join(" atau ")}.`,
+        showConfirmButton: false,
+        timer: 3000,
+      });
       router.push("/");
       return;
     }
@@ -317,6 +329,11 @@ const CreateDocumentPage: React.FC = () => {
         },
         body: JSON.stringify(dataToSend),
       });
+
+      if (response.status === 401) {
+        handleSessionExpired(router, Swal);
+        return;
+      }
 
       const result = await response.json();
 
