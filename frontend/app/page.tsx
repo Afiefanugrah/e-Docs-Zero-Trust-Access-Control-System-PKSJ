@@ -1,9 +1,9 @@
-// app/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Swal from "sweetalert2"; // <--- BARIS KRITIS: Import SweetAlert2
+import Swal from "sweetalert2";
+import { isTokenExpired, clearSession, handleSessionExpired as sharedHandleSessionExpired } from "@/utils/auth";
 import {
   FiLogOut,
   FiFileText,
@@ -64,6 +64,11 @@ const GlobalDocumentsPage: React.FC = () => {
         },
       });
 
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       if (!response.ok) {
         throw new Error("Gagal memuat dokumen.");
       }
@@ -85,10 +90,33 @@ const GlobalDocumentsPage: React.FC = () => {
 
   // --- 1. AMBIL DATA USER DAN PROTEKSI ROUTE ---
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
+    // 🛡️ Migrasi data dari localStorage ke sessionStorage untuk keamanan Zero Trust
+    const localToken = localStorage.getItem("authToken");
+    if (localToken) {
+      sessionStorage.setItem("authToken", localToken);
+      localStorage.removeItem("authToken");
+    }
+    const localRole = localStorage.getItem("userRole");
+    if (localRole) {
+      sessionStorage.setItem("userRole", localRole);
+      localStorage.removeItem("userRole");
+    }
+    const localId = localStorage.getItem("userId");
+    if (localId) {
+      sessionStorage.setItem("userId", localId);
+      localStorage.removeItem("userId");
+    }
+
+    const token = sessionStorage.getItem("authToken");
 
     if (!token) {
       router.push("/login");
+      return;
+    }
+
+    // Periksa kedaluwarsa token di sisi client sebelum fetch
+    if (isTokenExpired(token)) {
+      sharedHandleSessionExpired(router, Swal);
       return;
     }
 
@@ -108,22 +136,13 @@ const GlobalDocumentsPage: React.FC = () => {
         const fetchedUser = data.data;
 
         setUserData(fetchedUser);
-        localStorage.setItem("userRole", fetchedUser.roleName);
+        sessionStorage.setItem("userRole", fetchedUser.roleName);
+        sessionStorage.setItem("userId", fetchedUser.id.toString());
 
         await fetchDocuments(token);
       } catch (error) {
         console.error("Error validasi sesi:", error);
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("userRole");
-        // Menggunakan SweetAlert2 untuk error sesi
-        Swal.fire({
-          icon: "warning",
-          title: "Sesi Kedaluwarsa",
-          text: "Sesi Anda telah berakhir. Harap login ulang.",
-          confirmButtonText: "OK",
-        }).then(() => {
-          router.push("/login");
-        });
+        sharedHandleSessionExpired(router, Swal);
       } finally {
         setLoading(false);
       }
@@ -161,7 +180,7 @@ const GlobalDocumentsPage: React.FC = () => {
       return;
     }
 
-    const token = localStorage.getItem("authToken");
+    const token = sessionStorage.getItem("authToken");
     if (!token) {
       router.push("/login");
       return;
@@ -176,6 +195,11 @@ const GlobalDocumentsPage: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
 
       const responseData = await response.json().catch(() => ({}));
 
@@ -215,10 +239,14 @@ const GlobalDocumentsPage: React.FC = () => {
   };
   // ------------------------------------
 
+  // --- Fungsi Penanganan Sesi Kedaluwarsa ---
+  const handleSessionExpired = () => {
+    sharedHandleSessionExpired(router, Swal);
+  };
+
   // --- LOGIKA LOGOUT (Tetap Sama) ---
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userRole");
+    clearSession();
     router.push("/login");
   };
 
@@ -227,7 +255,7 @@ const GlobalDocumentsPage: React.FC = () => {
     (doc) =>
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.Creator.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.status.toLowerCase().includes(searchTerm.toLowerCase())
+      doc.status.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   // --- TAMPILAN LOADING SEMENTARA ---
@@ -356,7 +384,7 @@ const GlobalDocumentsPage: React.FC = () => {
                     <button
                       onClick={() =>
                         router.push(
-                          `/documents/${encodeURIComponent(doc.slug)}`
+                          `/documents/${encodeURIComponent(doc.slug)}`,
                         )
                       }
                       className="text-blue-600 hover:text-blue-800 flex items-center justify-end w-full"
@@ -369,7 +397,7 @@ const GlobalDocumentsPage: React.FC = () => {
                       <button
                         onClick={() =>
                           router.push(
-                            `/documents/edit/${encodeURIComponent(doc.slug)}`
+                            `/documents/edit/${encodeURIComponent(doc.slug)}`,
                           )
                         }
                         className="text-yellow-600 hover:text-yellow-800 flex items-center justify-end w-full mt-1"

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Swal from "sweetalert2";
+import { isTokenExpired, clearSession, handleSessionExpired } from "@/utils/auth";
 import {
   FiArrowLeft,
   FiSave,
@@ -261,9 +263,11 @@ const EditDocumentPage: React.FC = () => {
 
   // --- 1. PROTEKSI ROLE & FETCH DATA LAMA ---
   useEffect(() => {
-    const authToken = localStorage.getItem("authToken");
+    const authToken = sessionStorage.getItem("authToken") || localStorage.getItem("authToken");
     const userRole =
-      typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("userRole") || localStorage.getItem("userRole")
+        : null;
     const currentSlug = encodedSlug ? decodeURIComponent(encodedSlug) : null;
 
     if (!authToken) {
@@ -271,12 +275,20 @@ const EditDocumentPage: React.FC = () => {
       return;
     }
 
+    // Periksa kedaluwarsa token di sisi client sebelum lanjut
+    if (isTokenExpired(authToken)) {
+      handleSessionExpired(router, Swal);
+      return;
+    }
+
     if (!userRole || !EDITOR_ROLES.includes(userRole)) {
-      alert(
-        `Akses Ditolak! Halaman ini hanya untuk peran ${EDITOR_ROLES.join(
-          " atau "
-        )}.`
-      );
+      Swal.fire({
+        icon: "error",
+        title: "Akses Ditolak!",
+        text: `Halaman ini hanya untuk peran ${EDITOR_ROLES.join(" atau ")}.`,
+        showConfirmButton: false,
+        timer: 3000,
+      });
       router.push("/");
       return;
     }
@@ -302,6 +314,11 @@ const EditDocumentPage: React.FC = () => {
             },
           }
         );
+
+        if (response.status === 401) {
+          handleSessionExpired(router, Swal);
+          return;
+        }
 
         if (response.status === 404) {
           setError("Dokumen tidak ditemukan.");
@@ -393,6 +410,11 @@ const EditDocumentPage: React.FC = () => {
         }
       );
 
+      if (response.status === 401) {
+        handleSessionExpired(router, Swal);
+        return;
+      }
+
       // --- PENANGANAN ERROR JSON YANG TANGGUH ---
       if (!response.ok) {
         const errorText = await response.text();
@@ -469,7 +491,7 @@ const EditDocumentPage: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         <header className="mb-6 flex justify-between items-center">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push(`/documents/${encodeURIComponent(originalSlug || "")}`)}
             className="flex items-center text-gray-600 hover:text-gray-800 transition font-medium"
           >
             <FiArrowLeft className="mr-2" /> Kembali

@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
+import { isTokenExpired, clearSession, handleSessionExpired } from "@/utils/auth";
 import {
   FiArrowLeft,
   FiUserPlus,
@@ -70,11 +71,17 @@ const CreateUserPage: React.FC = () => {
 
   // --- 1. Proteksi Role (Hanya Admin) ---
   useEffect(() => {
-    const authToken = localStorage.getItem("authToken");
-    const userRole = localStorage.getItem("userRole");
+    const authToken = sessionStorage.getItem("authToken") || localStorage.getItem("authToken");
+    const userRole = sessionStorage.getItem("userRole") || localStorage.getItem("userRole");
 
     if (!authToken) {
       router.push("/login");
+      return;
+    }
+
+    // Periksa kedaluwarsa token di sisi client sebelum lanjut
+    if (isTokenExpired(authToken)) {
+      handleSessionExpired(router, Swal);
       return;
     }
 
@@ -146,6 +153,11 @@ const CreateUserPage: React.FC = () => {
         body: JSON.stringify(dataToSend),
       });
 
+      if (response.status === 401) {
+        handleSessionExpired(router, Swal);
+        return;
+      }
+
       const result = await response.json();
 
       if (response.ok) {
@@ -168,8 +180,12 @@ const CreateUserPage: React.FC = () => {
         });
         router.push("/admin?view=users"); // Redirect ke Admin Panel
       } else {
-        // Tampilkan error dari backend
-        throw new Error(result.message || "Gagal membuat pengguna baru.");
+        // Tampilkan error dari backend langsung tanpa throw
+        Swal.fire({
+          icon: "error",
+          title: "Gagal!",
+          text: result.message || "Gagal membuat pengguna baru.",
+        });
       }
     } catch (error) {
       console.error("Create User Error:", error);

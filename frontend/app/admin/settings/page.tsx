@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
+import { isTokenExpired, clearSession, handleSessionExpired } from "@/utils/auth";
 import {
   FiArrowLeft,
   FiSave,
@@ -44,19 +46,31 @@ const SettingsPage: React.FC = () => {
 
   // --- PROTEKSI ROLE (RBAC) ---
   useEffect(() => {
-    const authToken = localStorage.getItem("authToken");
+    const authToken = sessionStorage.getItem("authToken") || localStorage.getItem("authToken");
     const userRole =
-      typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("userRole") || localStorage.getItem("userRole")
+        : null;
 
     if (!authToken) {
       router.push("/login");
       return;
     }
 
+    // Periksa kedaluwarsa token di sisi client sebelum lanjut
+    if (isTokenExpired(authToken)) {
+      handleSessionExpired(router, Swal);
+      return;
+    }
+
     if (userRole !== ADMIN_ROLE_NAME) {
-      alert(
-        `Akses Ditolak! Halaman ini hanya untuk peran ${ADMIN_ROLE_NAME.toUpperCase()}.`
-      );
+      Swal.fire({
+        icon: "error",
+        title: "Akses Ditolak!",
+        text: `Halaman ini hanya untuk peran ${ADMIN_ROLE_NAME.toUpperCase()}.`,
+        showConfirmButton: false,
+        timer: 3000,
+      });
       router.push("/");
       return;
     }
