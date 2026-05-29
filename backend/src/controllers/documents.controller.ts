@@ -390,13 +390,14 @@ class DocumentsController {
         newSlug = generateSlug(updateData.title);
       }
 
-      // Simpan data yang diperbarui
+      // Simpan data yang diperbarui - Whitelist field saja (mencegah Mass Assignment)
       const updatedDocument = await document.update({
-        ...updateData,
+        title: updateData.title !== undefined ? updateData.title : document.title,
+        description: updateData.description !== undefined ? updateData.description : document.description,
+        markdown_content: updateData.markdown_content !== undefined ? updateData.markdown_content : document.markdown_content,
         slug: newSlug,
         checksum: newChecksum,
         updated_by: currentUserId, // Perbarui siapa yang terakhir mengubah
-        // Catatan: version dan status TIDAK diubah di sini; itu melalui workflow controller
       });
 
       const responseData = {
@@ -510,10 +511,11 @@ class DocumentsController {
         }
       }
 
-      // 4. Simpan data yang diperbarui
+      // 4. Simpan data yang diperbarui - Whitelist field saja (mencegah Mass Assignment)
       const updatedDocument = await document.update({
-        // Menggunakan spread operator untuk menerapkan semua field dari updateData
-        ...updateData,
+        title: updateData.title !== undefined ? updateData.title : document.title,
+        description: updateData.description !== undefined ? updateData.description : document.description,
+        markdown_content: updateData.markdown_content !== undefined ? updateData.markdown_content : document.markdown_content,
         slug: newSlug,
         checksum: newChecksum,
         updated_by: userId,

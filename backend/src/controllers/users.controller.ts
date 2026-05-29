@@ -81,7 +81,7 @@ class UserController {
 
       if (cekUsername) {
         await AuditLog.create({
-          userId: cekUsername.id,
+          userId: (req as any).user?.id || null,
           actionType: "REGISTRATION_FAILED",
           tableName: "Users",
           recordId: undefined,
@@ -102,7 +102,7 @@ class UserController {
       const usernameCheck = validateUsername(username);
       if (!usernameCheck.isValid) {
         await AuditLog.create({
-          userId: 0,
+          userId: (req as any).user?.id || null,
           actionType: "REGISTRATION_FAILED",
           tableName: "Users",
           recordId: undefined,
@@ -120,7 +120,7 @@ class UserController {
         const ipAddress = getIpAddress(req);
 
         await AuditLog.create({
-          userId: 0,
+          userId: (req as any).user?.id || null,
           actionType: "REGISTRATION_FAILED",
           tableName: "Users",
           recordId: undefined,

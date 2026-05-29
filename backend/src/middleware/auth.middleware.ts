@@ -4,9 +4,6 @@ import { sendError } from "../utils/response.utils";
 import AuditLog from "../models/auditLogs.model";
 import { getIpAddress } from "../utils/ipHelper.utils";
 
-// KRITIS: Tentukan ID User Sistem/Guest. ASUMSI ID ini ada di tabel Users Anda.
-const DEFAULT_SYSTEM_USER_ID = 1;
-
 const roleMap: Record<number, string> = {
   1: "viewer",
   2: "editor",
@@ -47,8 +44,9 @@ export const authenticateToken = (
         // Gagal decode token (misalnya, format rusak)
       }
 
-      AuditLog.create({
-        userId: userIdFromToken || DEFAULT_SYSTEM_USER_ID,
+      // 🛡️ Upayakan menyimpan log dengan userIdFromToken, jika gagal (FK constraint), fallback ke null
+      const logData = {
+        userId: userIdFromToken,
         actionType: "AUTH_FAILED",
         tableName: "Authentication",
         ipAddress: ipAddress,
@@ -56,6 +54,13 @@ export const authenticateToken = (
           reason: `Autentikasi gagal: ${err.name}`,
           userAttemptId: userIdFromToken,
         },
+      };
+
+      AuditLog.create(logData).catch((dbErr) => {
+        logData.userId = null as any;
+        AuditLog.create(logData).catch((err2) => {
+          console.error("Gagal membuat audit log:", err2);
+        });
       });
 
       if (err.name === "TokenExpiredError") {
@@ -92,11 +97,10 @@ export const authorizeRole = (allowedRoles: string[]) => {
     const ipAddress = getIpAddress(req);
 
     const userRole = actingUser?.roleName;
-
-    const userId = actingUser?.id || DEFAULT_SYSTEM_USER_ID;
+    const userId = actingUser?.id || null;
 
     if (!userRole) {
-      await AuditLog.create({
+      const authFailedLog = {
         userId: userId,
         actionType: "AUTHENTICATION_FAILED",
         tableName: "Authorization",
@@ -105,7 +109,15 @@ export const authorizeRole = (allowedRoles: string[]) => {
           reason: "Informasi peran hilang dari token",
           endpoint: req.originalUrl,
         },
+      };
+
+      AuditLog.create(authFailedLog).catch((err) => {
+        authFailedLog.userId = null;
+        AuditLog.create(authFailedLog).catch((err2) => {
+          console.error("Gagal membuat audit log:", err2);
+        });
       });
+
       return sendError(
         res,
         "Akses Ditolak: Informasi peran tidak ditemukan.",
@@ -121,7 +133,7 @@ export const authorizeRole = (allowedRoles: string[]) => {
       return next();
     }
 
-    await AuditLog.create({
+    const accessDeniedLog = {
       userId: userId,
       actionType: "ACCESS_DENIED",
       tableName: "Authorization",
@@ -131,6 +143,13 @@ export const authorizeRole = (allowedRoles: string[]) => {
         userRole: userRole,
         requiredRoles: allowedRoles.join(", "),
       },
+    };
+
+    AuditLog.create(accessDeniedLog).catch((err) => {
+      accessDeniedLog.userId = null;
+      AuditLog.create(accessDeniedLog).catch((err2) => {
+        console.error("Gagal membuat audit log:", err2);
+      });
     });
 
     return sendError(
