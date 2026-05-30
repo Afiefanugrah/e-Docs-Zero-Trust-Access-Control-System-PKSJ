@@ -3,6 +3,15 @@ import Roles from "../models/roles.model";
 import { hashPassword } from "../utils/hash.utils";
 
 export async function seedUsers(): Promise<void> {
+  // Cek apakah tabel users sudah memiliki data
+  const userCount = await Users.count();
+  if (userCount > 0) {
+    console.log("ℹ️ Tabel Users sudah terisi. Seeder pengguna dilewati.");
+    return;
+  }
+
+  console.log("🚀 Tabel Users kosong. Memulai seeding pengguna default...");
+
   // Ambil semua role dari database untuk mencocokkan ID secara dinamis
   const roles = await Roles.findAll();
   const getRoleIdByName = (name: string): number => {
@@ -35,19 +44,13 @@ export async function seedUsers(): Promise<void> {
     const roleId = getRoleIdByName(user.roleName);
     const passwordHash = await hashPassword(user.password);
 
-    // Cari apakah user sudah ada
-    const existingUser = await Users.findOne({ where: { username: user.username } });
-    if (!existingUser) {
-      await Users.create({
-        username: user.username,
-        password: passwordHash,
-        roleId,
-        isActive: user.isActive,
-        failedAttemptCount: 0,
-      });
-      console.log(`👤 User '${user.username}' (${user.roleName}) berhasil di-seed.`);
-    } else {
-      console.log(`👤 User '${user.username}' sudah ada.`);
-    }
+    await Users.create({
+      username: user.username,
+      password: passwordHash,
+      roleId,
+      isActive: user.isActive,
+      failedAttemptCount: 0,
+    });
+    console.log(`👤 User '${user.username}' (${user.roleName}) berhasil di-seed.`);
   }
 }

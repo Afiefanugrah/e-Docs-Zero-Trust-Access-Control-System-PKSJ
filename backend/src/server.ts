@@ -46,12 +46,6 @@ async function initializeServer() {
 
     setupAssociations();
 
-    // SEMENTARA ganti jadi force: true untuk menghapus tumpukan indeks sampah
-    // await roleModel.sync({ force: true });
-    // await userModel.sync({ force: true });
-    // await documentModel.sync({ force: true });
-    // await auditLogModel.sync({ force: true });
-
     await roleModel.sync();
     await userModel.sync();
     await documentModel.sync();
