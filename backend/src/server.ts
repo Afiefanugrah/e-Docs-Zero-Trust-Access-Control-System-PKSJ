@@ -12,6 +12,7 @@ import { setupAssociations } from "./models/associations.model";
 
 // seeder
 import { seedRoles } from "./seeding/roles.seeding";
+import { seedUsers } from "./seeding/users.seeding";
 
 // ambil file di routes
 import usersEndpoint from "./routes/users.route";
@@ -57,6 +58,7 @@ async function initializeServer() {
     await auditLogModel.sync();
 
     await seedRoles();
+    await seedUsers();
 
     console.log(
       "✅ Database telah di-RESET dan disinkronkan ulang dengan bersih.",
