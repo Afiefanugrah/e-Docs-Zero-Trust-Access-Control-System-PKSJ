@@ -21,19 +21,19 @@ export async function seedUsers(): Promise<void> {
 
   const usersToSeed = [
     {
-      username: "admin",
+      username: "Admin",
       password: "Admin123!",
       roleName: "admin",
       isActive: true,
     },
     {
-      username: "editor",
+      username: "Editor",
       password: "Editor123!",
       roleName: "editor",
       isActive: true,
     },
     {
-      username: "viewer",
+      username: "Viewer",
       password: "Viewer123!",
       roleName: "viewer",
       isActive: true,

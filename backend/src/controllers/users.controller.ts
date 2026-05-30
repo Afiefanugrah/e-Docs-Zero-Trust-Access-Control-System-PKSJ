@@ -53,23 +53,6 @@ class UserController {
         return sendError(res, "Mohon isi username, password, dan role,", 400);
       }
 
-      const cekUsername = await userService.findByUsername(username);
-
-      if (cekUsername) {
-        await userService.logRegistrationFailed(
-          actingUserId,
-          username,
-          "Username sudah digunakan",
-          ipAddress
-        );
-
-        return sendError(
-          res,
-          "Username sudah digunakan. Silakan pilih yang lain.",
-          409,
-        );
-      }
-
       const usernameCheck = validateUsername(username);
       if (!usernameCheck.isValid) {
         await userService.logRegistrationFailed(
@@ -90,6 +73,23 @@ class UserController {
           ipAddress
         );
         return sendError(res, passwordCheck.message || "Password lemah", 400);
+      }
+
+      const cekUsername = await userService.findByUsername(username);
+
+      if (cekUsername) {
+        await userService.logRegistrationFailed(
+          actingUserId,
+          username,
+          "Username sudah digunakan",
+          ipAddress
+        );
+
+        return sendError(
+          res,
+          "Username sudah digunakan. Silakan pilih yang lain.",
+          409,
+        );
       }
 
       const passwordHash = await hashPassword(password);
