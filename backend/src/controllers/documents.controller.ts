@@ -1,10 +1,9 @@
 import { Request, Response } from "express";
-import Documents, { DocumentStatus } from "../models/documents.model";
+import { DocumentStatus } from "../models/documents.model";
+import documentsService from "../service/documents.service";
 import { sendError, sendSuccess } from "../utils/response.utils";
 import { sha256 } from "js-sha256";
 import { getIpAddress } from "../utils/ipHelper.utils";
-import AuditLog from "../models/auditLogs.model";
-import Users from "../models/users.model";
 
 interface CreateDocumentBody {
   title: string;
@@ -33,39 +32,11 @@ class DocumentsController {
       const actingUser = (req as any).user;
       const ipAddress = getIpAddress(req);
 
-      const documents = await Documents.findAll({
-        attributes: [
-          "id",
-          "title",
-          "slug",
-          "description",
-          "status",
-          "version",
-          "created_by",
-          "updatedAt",
-        ],
-        include: [
-          {
-            model: Users,
-            as: "Creator",
-            attributes: ["username"],
-          },
-        ],
-        order: [["updatedAt", "DESC"]],
-      });
-
-      await AuditLog.create({
-        userId: actingUser.id,
-        actionType: "READ_ALL_DOCUMENTS",
-        tableName: "Documents",
-        recordId: undefined,
-        ipAddress: ipAddress,
-        details: {
-          endpoint: "/api/documents/all",
-          count: documents.length,
-          userRole: actingUser.roleName,
-        },
-      });
+      const documents = await documentsService.getAllDocuments(
+        actingUser.id,
+        actingUser.roleName,
+        ipAddress
+      );
 
       return sendSuccess(
         res,
@@ -77,7 +48,6 @@ class DocumentsController {
         },
       );
     } catch (error) {
-      // console.error("Error saat mengambil daftar dokumen:", error);
       return sendError(res, "Gagal mengambil daftar dokumen.", 500, error);
     }
   }
@@ -92,42 +62,16 @@ class DocumentsController {
     }
 
     try {
-      const document = await Documents.findByPk(id, {
-        include: [
-          { model: Users, as: "Creator", attributes: ["username"] },
-          { model: Users, as: "Updater", attributes: ["username"] },
-        ],
-      });
+      const document = await documentsService.getDocumentById(
+        id,
+        actingUser.id,
+        actingUser.roleName,
+        ipAddress
+      );
 
       if (!document) {
-        // CATAT LOG GAGAL: Mencoba membaca dokumen yang tidak ada
-        await AuditLog.create({
-          userId: actingUser.id,
-          actionType: "READ_DOCUMENT_FAILED",
-          tableName: "Documents",
-          recordId: id,
-          ipAddress: ipAddress,
-          details: {
-            reason: "Dokumen tidak ditemukan (404)",
-            userRole: actingUser.roleName,
-          },
-        });
-
         return sendError(res, "Dokumen tidak ditemukan.", 404);
       }
-
-      await AuditLog.create({
-        userId: actingUser.id,
-        actionType: "READ_DOCUMENT_SUCCESS",
-        tableName: "Documents",
-        recordId: id,
-        ipAddress: ipAddress,
-        details: {
-          title: document.title,
-          status: document.status,
-          userRole: actingUser.roleName,
-        },
-      });
 
       return sendSuccess(
         res,
@@ -141,67 +85,29 @@ class DocumentsController {
     }
   }
 
-  // Pastikan Anda mengimpor Users dan AuditLog, serta getIpAddress
-
   public async getDocumentBySlug(
     req: Request,
     res: Response,
   ): Promise<Response> {
-    // Ambil slug dari parameter URL (misalnya, req.params.slug)
     const slug = req.params.slug;
-
-    // Asumsi endpoint ini dilindungi (terotentikasi)
     const actingUser = (req as any).user;
     const ipAddress = getIpAddress(req);
 
-    // Cek slug yang tidak valid atau hilang
     if (!slug) {
       return sendError(res, "Slug dokumen tidak diberikan.", 400);
     }
 
     try {
-      // 1. Cari dokumen menggunakan slug
-      const document = await Documents.findOne({
-        where: { slug }, // <--- Perubahan di sini
-        include: [
-          { model: Users, as: "Creator", attributes: ["username"] },
-          { model: Users, as: "Updater", attributes: ["username"] },
-        ],
-      });
+      const document = await documentsService.getDocumentBySlug(
+        slug,
+        actingUser.id,
+        actingUser.roleName,
+        ipAddress
+      );
 
-      // --- 2. Dokumen Tidak Ditemukan (404) ---
       if (!document) {
-        // CATAT LOG GAGAL
-        await AuditLog.create({
-          userId: actingUser.id,
-          actionType: "READ_DOCUMENT_FAILED",
-          tableName: "Documents",
-          recordId: undefined,
-          ipAddress: ipAddress,
-          details: {
-            reason: "Dokumen tidak ditemukan (404)",
-            searchParam: `Slug: ${slug}`,
-            userRole: actingUser.roleName,
-          },
-        });
-
         return sendError(res, "Dokumen tidak ditemukan.", 404);
       }
-
-      // --- 3. Akses Berhasil (200) ---
-      await AuditLog.create({
-        userId: actingUser.id,
-        actionType: "READ_DOCUMENT_SUCCESS",
-        tableName: "Documents",
-        recordId: document.id, // Gunakan ID dokumen yang ditemukan
-        ipAddress: ipAddress,
-        details: {
-          title: document.title,
-          status: document.status,
-          searchParam: `Slug: ${slug}`,
-          userRole: actingUser.roleName,
-        },
-      });
 
       return sendSuccess(
         res,
@@ -211,26 +117,10 @@ class DocumentsController {
       );
     } catch (error) {
       console.error(`Error saat mengambil dokumen (Slug: ${slug}):`, error);
-
-      // --- 4. Gagal Karena Server Error (500) ---
-      await AuditLog.create({
-        userId: actingUser.id,
-        actionType: "READ_DOCUMENT_ERROR",
-        tableName: "Documents",
-        recordId: undefined,
-        ipAddress: ipAddress,
-        details: {
-          error: (error as Error).message,
-          searchParam: `Slug: ${slug}`,
-          userRole: actingUser.roleName,
-        },
-      });
-
       return sendError(res, "Gagal mengambil dokumen.", 500, error);
     }
   }
 
-  // --- POST / CREATE Document ---
   public async createDocument(req: Request, res: Response): Promise<Response> {
     const actingUser = (req as any).user;
     const ipAddress = getIpAddress(req);
@@ -241,36 +131,26 @@ class DocumentsController {
         req.body as CreateDocumentBody;
 
       if (!title || !markdown_content) {
-        await AuditLog.create({
-          userId: userId,
-          actionType: "CREATE_DOCUMENT_FAILED",
-          tableName: "Documents",
-          recordId: undefined,
-          ipAddress: ipAddress,
-          details: {
-            reason: "Judul atau konten kosong",
-            attemptedTitle: title,
-          },
-        });
+        await documentsService.logCreateDocumentFailed(
+          userId,
+          title,
+          "Judul atau konten kosong",
+          ipAddress
+        );
         return sendError(res, "Judul dan konten Markdown wajib diisi.", 400);
       }
 
       const slug = generateSlug(title);
 
-      const existingDocument = await Documents.findOne({ where: { slug } });
+      const existingDocument = await documentsService.findBySlugOnly(slug);
       if (existingDocument) {
-        await AuditLog.create({
-          userId: userId,
-          actionType: "CREATE_DOCUMENT_FAILED",
-          tableName: "Documents",
-          recordId: undefined,
-          ipAddress: ipAddress,
-          details: {
-            reason: "Slug sudah digunakan",
-            attemptedTitle: title,
-            generatedSlug: slug,
-          },
-        });
+        await documentsService.logCreateDocumentFailed(
+          userId,
+          title,
+          "Slug sudah digunakan",
+          ipAddress,
+          slug
+        );
         return sendError(
           res,
           "Judul dokumen sudah ada. Ubah judul sedikit.",
@@ -280,34 +160,17 @@ class DocumentsController {
 
       const checksum = sha256(markdown_content);
 
-      // 2. Buat dokumen baru di database
-      const newDocument = await Documents.create({
+      const newDocument = await documentsService.createDocument(
         title,
         slug,
-        description: description || "",
+        description || "",
         markdown_content,
-        // Status diambil dari enum yang diimpor dari model
-        status: DocumentStatus.Draft,
-        version: "1.0",
         checksum,
-        created_by: userId,
-        updated_by: userId,
-      });
+        userId,
+        actingUser.roleName,
+        ipAddress
+      );
 
-      await AuditLog.create({
-        userId: userId,
-        actionType: "DOCUMENT_CREATED",
-        tableName: "Documents",
-        recordId: newDocument.id,
-        ipAddress: ipAddress,
-        details: {
-          title: newDocument.title,
-          status: newDocument.status,
-          userRole: actingUser.roleName,
-        },
-      });
-
-      // Siapkan response data
       const responseData = {
         id: newDocument.id,
         title: newDocument.title,
@@ -331,13 +194,10 @@ class DocumentsController {
     }
   }
 
-  // --- PUT / UPDATE Document ---
   public async updateDocument(req: Request, res: Response): Promise<Response> {
     try {
       const docId = parseInt(req.params.id, 10);
-      // ID pengguna yang sedang login (penting untuk kepemilikan dan updated_by)
       const currentUserId = (req as any).user.id;
-
       const updateData = req.body as UpdateDocumentBody;
 
       if (Object.keys(updateData).length === 0) {
@@ -348,36 +208,26 @@ class DocumentsController {
         );
       }
 
-      // 1. Ambil Dokumen yang Ada
-      const document = await Documents.findByPk(docId);
+      const document = await documentsService.findByIdOnly(docId);
 
       if (!document) {
         return sendError(res, "Dokumen tidak ditemukan.", 404);
       }
 
-      // --- 2. LOGIKA OTORISASI KHUSUS (MINGGU 3) ---
-
-      // Contoh Otorisasi: Hanya pencipta yang boleh mengedit jika status masih DRAFT
       if (
         document.status !== DocumentStatus.Draft &&
         document.created_by !== currentUserId
       ) {
-        // ASUMSI: Middleware authorizeRole sudah memfilter Admin, Editor di route
         return sendError(
           res,
           "Dokumen sudah disetujui (Approved) dan tidak dapat diedit.",
           403,
         );
       }
-      // Tambahkan cek kepemilikan jika diperlukan (e.g., Editor hanya boleh edit milik sendiri)
-      // if (document.created_by !== currentUserId) { ... }
 
       let newChecksum = document.checksum;
       let newSlug = document.slug;
 
-      // 3. Perhitungan dan Pembaruan Data
-
-      // Jika konten Markdown diubah, hitung ulang checksum
       if (
         updateData.markdown_content &&
         updateData.markdown_content !== document.markdown_content
@@ -385,20 +235,21 @@ class DocumentsController {
         newChecksum = sha256(updateData.markdown_content);
       }
 
-      // Jika judul diubah, hitung ulang slug
       if (updateData.title && updateData.title !== document.title) {
         newSlug = generateSlug(updateData.title);
       }
 
-      // Simpan data yang diperbarui - Whitelist field saja (mencegah Mass Assignment)
-      const updatedDocument = await document.update({
-        title: updateData.title !== undefined ? updateData.title : document.title,
-        description: updateData.description !== undefined ? updateData.description : document.description,
-        markdown_content: updateData.markdown_content !== undefined ? updateData.markdown_content : document.markdown_content,
-        slug: newSlug,
-        checksum: newChecksum,
-        updated_by: currentUserId, // Perbarui siapa yang terakhir mengubah
-      });
+      const updatedDocument = await documentsService.updateDocumentById(
+        document,
+        {
+          title: updateData.title !== undefined ? updateData.title : document.title,
+          description: updateData.description !== undefined ? updateData.description : document.description,
+          markdown_content: updateData.markdown_content !== undefined ? updateData.markdown_content : document.markdown_content,
+          slug: newSlug,
+          checksum: newChecksum,
+        },
+        currentUserId
+      );
 
       const responseData = {
         id: updatedDocument.id,
@@ -429,13 +280,10 @@ class DocumentsController {
   ): Promise<Response> {
     const actingUser = (req as any).user;
     const ipAddress = getIpAddress(req);
-    // Kita asumsikan user sudah diautentikasi (melalui middleware)
     const userId = actingUser.id;
 
     try {
       const slugToUpdate = req.params.slug;
-
-      // Ambil SEMUA data dari body, menggunakan interface UpdateDocumentBody
       const updateData = req.body as UpdateDocumentBody;
 
       if (Object.keys(updateData).length === 0) {
@@ -446,33 +294,23 @@ class DocumentsController {
         );
       }
 
-      // Destructuring untuk pengecekan dan perhitungan
       const { title, markdown_content } = updateData;
 
-      // 1. Ambil Dokumen yang Ada berdasarkan SLUG
-      const document = await Documents.findOne({
-        where: { slug: slugToUpdate },
-      });
+      const document = await documentsService.findBySlugOnly(slugToUpdate);
 
       if (!document) {
         return sendError(res, "Dokumen tidak ditemukan.", 404);
       }
 
-      // --- 2. LOGIKA OTORISASI ---
-      // Hanya izinkan edit jika dokumen masih Draft ATAU user adalah pembuatnya
       if (
         document.status !== DocumentStatus.Draft &&
         document.created_by !== userId
       ) {
-        // Log Audit untuk penolakan akses
-        await AuditLog.create({
-          userId: userId,
-          actionType: "UPDATE_DOCUMENT_FAILED",
-          details: {
-            reason: "Dokumen Approved, akses ditolak",
-            slug: slugToUpdate,
-          },
-        });
+        await documentsService.logUpdateFailed(
+          userId,
+          slugToUpdate,
+          "Dokumen Approved, akses ditolak"
+        );
         return sendError(
           res,
           "Dokumen sudah disetujui (Approved) dan tidak dapat diedit oleh Anda.",
@@ -483,21 +321,14 @@ class DocumentsController {
       let newChecksum = document.checksum;
       let newSlug = document.slug;
 
-      // 3. Perhitungan Slug dan Checksum
-
-      // Jika konten Markdown diubah, hitung ulang checksum
       if (markdown_content && markdown_content !== document.markdown_content) {
         newChecksum = sha256(markdown_content);
       }
 
-      // Jika judul diubah, hitung ulang slug dan cek duplikasi
       if (title && title !== document.title) {
         newSlug = generateSlug(title);
 
-        // Pengecekan duplikasi slug baru (KRITIS)
-        const existingDocumentWithNewSlug = await Documents.findOne({
-          where: { slug: newSlug },
-        });
+        const existingDocumentWithNewSlug = await documentsService.findBySlugOnly(newSlug);
 
         if (
           existingDocumentWithNewSlug &&
@@ -511,35 +342,23 @@ class DocumentsController {
         }
       }
 
-      // 4. Simpan data yang diperbarui - Whitelist field saja (mencegah Mass Assignment)
-      const updatedDocument = await document.update({
-        title: updateData.title !== undefined ? updateData.title : document.title,
-        description: updateData.description !== undefined ? updateData.description : document.description,
-        markdown_content: updateData.markdown_content !== undefined ? updateData.markdown_content : document.markdown_content,
-        slug: newSlug,
-        checksum: newChecksum,
-        updated_by: userId,
-      });
-
-      // Catat Log Audit
-      await AuditLog.create({
-        userId: userId,
-        actionType: "DOCUMENT_UPDATED_BY_SLUG",
-        tableName: "Documents",
-        recordId: updatedDocument.id,
-        ipAddress: ipAddress,
-        details: {
-          title: updatedDocument.title,
-          slug_updated: newSlug !== document.slug,
-          userRole: actingUser.roleName,
+      const updatedDocument = await documentsService.updateDocumentBySlug(
+        document,
+        {
+          title: updateData.title !== undefined ? updateData.title : document.title,
+          description: updateData.description !== undefined ? updateData.description : document.description,
+          markdown_content: updateData.markdown_content !== undefined ? updateData.markdown_content : document.markdown_content,
+          slug: newSlug,
+          checksum: newChecksum,
         },
-      });
+        userId,
+        actingUser.roleName,
+        ipAddress
+      );
 
-      // 5. Siapkan Response
       const responseData = {
         id: updatedDocument.id,
         title: updatedDocument.title,
-        // Penting: Mengembalikan slug baru jika ada perubahan, untuk redirect frontend
         slug: updatedDocument.slug,
         checksum: updatedDocument.checksum,
         updatedAt: updatedDocument.updatedAt,
@@ -556,20 +375,15 @@ class DocumentsController {
         `Error saat mengupdate dokumen slug ${req.params.slug}:`,
         error,
       );
-      // Log Audit untuk error 500
-      await AuditLog.create({
-        userId: userId,
-        actionType: "UPDATE_DOCUMENT_ERROR",
-        tableName: "Documents",
-        recordId: undefined,
-        ipAddress: ipAddress,
-        details: { reason: "Gagal memproses update", error: "error.message" },
-      });
+      await documentsService.logUpdateError(
+        userId,
+        ipAddress,
+        "Gagal memproses update",
+        (error as Error).message
+      );
       return sendError(res, "Gagal memperbarui dokumen.", 500, error);
     }
   }
-
-  // Tambahkan kode ini di dalam class DocumentsController
 
   public async deleteDocumentBySlug(
     req: Request,
@@ -585,45 +399,27 @@ class DocumentsController {
     }
 
     try {
-      // 1. Ambil Dokumen yang Ada
-      const document = await Documents.findOne({
-        where: { slug: slugToDelete },
-      });
+      const document = await documentsService.findBySlugOnly(slugToDelete);
 
       if (!document) {
-        await AuditLog.create({
-          userId: userId,
-          actionType: "DELETE_DOCUMENT_FAILED",
-          tableName: "Documents",
-          recordId: undefined,
-          ipAddress: ipAddress,
-          details: {
-            reason: "Dokumen target tidak ditemukan (404)",
-            slug: slugToDelete,
-            userRole: actingUser.roleName,
-          },
-        });
+        await documentsService.logDeleteFailed(
+          userId,
+          slugToDelete,
+          actingUser.roleName,
+          ipAddress
+        );
         return sendError(res, "Dokumen tidak ditemukan.", 404);
       }
 
       const documentTitle = document.title;
-      await document.destroy(); // Menghapus record
+      await documentsService.deleteDocumentBySlug(
+        document,
+        slugToDelete,
+        userId,
+        actingUser.roleName,
+        ipAddress
+      );
 
-      await AuditLog.create({
-        userId: userId,
-        actionType: "DOCUMENT_DELETED",
-        tableName: "Documents",
-        recordId: document.id,
-        ipAddress: ipAddress,
-        details: {
-          deletedTitle: documentTitle,
-          deletedSlug: slugToDelete,
-          userRole: actingUser.roleName,
-          deletedStatus: document.status,
-        },
-      });
-
-      // 4. Siapkan Response
       return sendSuccess(
         res,
         null,

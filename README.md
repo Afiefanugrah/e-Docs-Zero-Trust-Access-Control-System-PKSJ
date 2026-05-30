@@ -111,7 +111,7 @@ Platform ini dilengkapi dengan pengujian otomatis untuk memvalidasi keamanan dan
   * Menguji perlindungan endpoint publik, deteksi token palsu, kontrol akses RBAC, pencegahan eksploitasi parameter (Mass Assignment), dan logging.
   * Jalankan di folder `backend`:
     ```bash
-    npx ts-node -r dotenv/config src/security-test.ts
+    npx ts-node -r dotenv/config src/test/security-test.ts
     ```
 * **UI Session Expiration Test (Puppeteer):**
   * Menguji skenario login otomatis, menunggu waktu kedaluwarsa sesi secara presisi, deteksi pop-up peringatan, dan pengalihan kembali ke login secara otomatis.

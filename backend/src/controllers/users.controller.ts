@@ -1,13 +1,9 @@
 import { Request, Response } from "express";
-import Users from "../models/users.model";
-import Roles from "../models/roles.model";
-import AuditLog from "../models/auditLogs.model";
-import * as bcrypt from "bcrypt";
+import userService from "../service/users.service";
+import { hashPassword } from "../utils/hash.utils";
 import { sendSuccess, sendError } from "../utils/response.utils";
 import { validateUsername, validatePassword } from "../utils/validators.utils";
 import { getIpAddress } from "../utils/ipHelper.utils";
-
-const MAX_FAILED_ATTEMPTS = 3;
 
 interface createUserBody {
   username: string;
@@ -23,31 +19,10 @@ interface ToggleActiveBody {
 class UserController {
   public async getAllUsers(req: Request, res: Response): Promise<Response> {
     try {
-      const users = await Users.findAll({
-        include: [
-          {
-            model: Roles,
-            as: "role",
-            attributes: ["name"],
-          },
-        ],
-        attributes: { exclude: ["password", "updatedAt"] },
-      });
-
       const actingUser = (req as any).user;
       const ipAddress = getIpAddress(req);
 
-      await AuditLog.create({
-        userId: actingUser.id,
-        actionType: "READ_ALL_USERS",
-        tableName: "Users",
-        recordId: undefined,
-        ipAddress: ipAddress,
-        details: {
-          endpoint: "/api/users/all",
-          count: users.length,
-        },
-      });
+      const users = await userService.getAllUsers(actingUser.id, ipAddress);
 
       return sendSuccess(
         res,
@@ -72,25 +47,21 @@ class UserController {
         req.body as createUserBody;
 
       const ipAddress = getIpAddress(req);
+      const actingUserId = (req as any).user?.id || null;
 
       if (!username || !password || !roleId) {
         return sendError(res, "Mohon isi username, password, dan role,", 400);
       }
 
-      const cekUsername = await Users.findOne({ where: { username } });
+      const cekUsername = await userService.findByUsername(username);
 
       if (cekUsername) {
-        await AuditLog.create({
-          userId: (req as any).user?.id || null,
-          actionType: "REGISTRATION_FAILED",
-          tableName: "Users",
-          recordId: undefined,
-          ipAddress: ipAddress,
-          details: {
-            reason: "Username sudah digunakan",
-            attemptedUsername: username,
-          },
-        });
+        await userService.logRegistrationFailed(
+          actingUserId,
+          username,
+          "Username sudah digunakan",
+          ipAddress
+        );
 
         return sendError(
           res,
@@ -101,59 +72,36 @@ class UserController {
 
       const usernameCheck = validateUsername(username);
       if (!usernameCheck.isValid) {
-        await AuditLog.create({
-          userId: (req as any).user?.id || null,
-          actionType: "REGISTRATION_FAILED",
-          tableName: "Users",
-          recordId: undefined,
-          ipAddress: ipAddress,
-          details: {
-            reason: usernameCheck.message || "Password lemah",
-            attemptedUsername: username,
-          },
-        });
+        await userService.logRegistrationFailed(
+          actingUserId,
+          username,
+          usernameCheck.message || "Username tidak valid",
+          ipAddress
+        );
         return sendError(res, usernameCheck.message!, 400);
       }
 
       const passwordCheck = validatePassword(password);
       if (!passwordCheck.isValid) {
-        const ipAddress = getIpAddress(req);
-
-        await AuditLog.create({
-          userId: (req as any).user?.id || null,
-          actionType: "REGISTRATION_FAILED",
-          tableName: "Users",
-          recordId: undefined,
-          ipAddress: ipAddress,
-          details: {
-            reason: passwordCheck.message || "Password lemah",
-            attemptedUsername: username,
-          },
-        });
+        await userService.logRegistrationFailed(
+          actingUserId,
+          username,
+          passwordCheck.message || "Password lemah",
+          ipAddress
+        );
         return sendError(res, passwordCheck.message || "Password lemah", 400);
       }
 
-      const passwordHash = await bcrypt.hash(password, 12);
+      const passwordHash = await hashPassword(password);
 
-      const newUser = await Users.create({
+      const newUser = await userService.registerUser(
         username,
-        password: passwordHash,
+        passwordHash,
         roleId,
         isActive,
-        failedAttemptCount: 0,
-      });
-
-      await AuditLog.create({
-        userId: newUser.id,
-        actionType: "USER_CREATED",
-        tableName: "Users",
-        recordId: newUser.id,
-        ipAddress: ipAddress,
-        details: {
-          role: roleId,
-          registeredBy: (req as any).user?.id || "SYSTEM/EXTERNAL",
-        },
-      });
+        actingUserId,
+        ipAddress
+      );
 
       const responseData = {
         id: newUser.id,
@@ -184,18 +132,13 @@ class UserController {
 
     // 1. Cek Pencegahan: Admin tidak boleh menonaktifkan dirinya sendiri
     if (actingUser.id === targetId) {
-      await AuditLog.create({
-        userId: actingUser.id,
-        actionType: "USER_TOGGLE_FAILED",
-        tableName: "Users",
-        recordId: targetId,
-        ipAddress: ipAddress,
-        details: {
-          reason: "Mencoba menonaktifkan diri sendiri",
-          targetId: targetId,
-          statusAttempt: isActive,
-        },
-      });
+      await userService.logToggleFailed(
+        actingUser.id,
+        targetId,
+        isActive,
+        "Mencoba menonaktifkan diri sendiri",
+        ipAddress
+      );
       return sendError(
         res,
         "Anda tidak dapat menonaktifkan akun Admin Anda sendiri.",
@@ -204,44 +147,26 @@ class UserController {
     }
 
     try {
-      const user = await Users.findByPk(targetId);
-
-      if (!user) {
-        return sendError(res, "Pengguna tidak ditemukan.", 404);
-      }
-
-      // 2. Lakukan Update Status
-      const oldStatus = user.isActive;
-      const newStatus = isActive;
-
-      await user.update({ isActive: newStatus });
-
-      const action = newStatus ? "USER_ACTIVATED" : "USER_DEACTIVATED";
-
-      // 3. Catat Log Audit
-      await AuditLog.create({
-        userId: actingUser.id,
-        actionType: action,
-        tableName: "Users",
-        recordId: user.id,
-        ipAddress: ipAddress,
-        details: {
-          targetUsername: user.username,
-          oldStatus: oldStatus,
-          newStatus: newStatus,
-        },
-      });
+      const user = await userService.toggleActiveStatus(
+        targetId,
+        isActive,
+        actingUser.id,
+        ipAddress
+      );
 
       return sendSuccess(
         res,
-        { id: user.id, isActive: newStatus },
+        { id: user.id, isActive: user.isActive },
         `Status pengguna ${user.username} berhasil diubah menjadi ${
-          newStatus ? "Aktif" : "Nonaktif"
+          user.isActive ? "Aktif" : "Nonaktif"
         }.`,
         200,
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saat toggle active status:", error);
+      if (error.message === "USER_NOT_FOUND") {
+        return sendError(res, "Pengguna tidak ditemukan.", 404);
+      }
       return sendError(res, "Gagal mengubah status pengguna.", 500, error);
     }
   }
@@ -249,7 +174,6 @@ class UserController {
   public async deleteUsers(req: Request, res: Response): Promise<Response> {
     try {
       const userId = parseInt(req.params.id, 10);
-
       const actingUser = (req as any).user;
       const ipAddress = getIpAddress(req);
 
@@ -257,35 +181,13 @@ class UserController {
         return sendError(res, "ID pengguna tidak valid.", 400);
       }
 
-      const user = await Users.findByPk(userId);
-      if (!user) {
-        await AuditLog.create({
-          userId: actingUser.id,
-          actionType: "DELETE_FAILED",
-          tableName: "Users",
-          recordId: userId,
-          ipAddress: ipAddress,
-          details: { reason: "Pengguna target tidak ditemukan" },
-        });
-        return sendError(res, "Pengguna tidak ditemukan.", 404);
-      }
-
-      await user.destroy();
-
-      await AuditLog.create({
-        userId: actingUser.id,
-        actionType: "USER_DELETED",
-        tableName: "Users",
-        recordId: userId,
-        ipAddress: ipAddress,
-        details: {
-          deletedUsername: user.username,
-          deletedRoleId: user.roleId,
-        },
-      });
+      await userService.deleteUser(userId, actingUser.id, ipAddress);
 
       return sendSuccess(res, null, "Pengguna berhasil dihapus.");
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === "USER_NOT_FOUND") {
+        return sendError(res, "Pengguna tidak ditemukan.", 404);
+      }
       return sendError(res, "Gagal membuat pengguna", 500, error);
     }
   }
